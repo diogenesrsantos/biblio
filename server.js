@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { Pool } = require('pg');
+const sanitizeHtml = require('sanitize-html');
 
 const ROOT = __dirname;
 for (const line of fs.existsSync(path.join(ROOT, '.env')) ? fs.readFileSync(path.join(ROOT, '.env'), 'utf8').split(/\r?\n/) : []) { const [key, ...value] = line.split('='); if (key && !process.env[key]) process.env[key] = value.join('='); }
@@ -14,20 +15,38 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const query = (text, values = []) => pool.query(text, values);
 const textValue = (value, max = 1000000) => String(value || '').trim().slice(0, max);
 const list = value => [...new Set(String(value || '').split(',').map(v => v.trim()).filter(Boolean))];
-const now = () => new Date().toISOString();
+const decoded = value => { try { return decodeURIComponent(value); } catch { return ''; } };
+const escapedContent = value => String(value || '').slice(0, 1000000).replace(/[&<>]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[character]);
+const contentOptions = removedStorage => ({
+  allowedTags: ['p', 'br', 'strong', 'b', 'em', 'i', 'u', 's', 'h2', 'h3', 'ul', 'ol', 'li', 'blockquote', 'a', 'img', 'figure', 'figcaption', 'pre', 'code'],
+  allowedAttributes: { a: ['href', 'target', 'rel'], img: ['src', 'alt', 'title', 'data-attachment-id'] },
+  allowedSchemes: ['http', 'https', 'mailto'],
+  transformTags: { a: sanitizeHtml.simpleTransform('a', { target: '_blank', rel: 'noopener noreferrer' }) },
+  exclusiveFilter: frame => frame.tag === 'img' && (!/^\/media\/[a-zA-Z0-9._%-]+$/.test(frame.attribs.src || '') || (removedStorage && decoded(frame.attribs.src.slice(7)) === removedStorage))
+});
+const cleanContent = (value, removedStorage) => {
+  let content = String(value || '').slice(0, 1000000);
+  if (removedStorage) {
+    const mediaPath = ('/media/' + encodeURIComponent(removedStorage)).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    content = content.replace(new RegExp(`<figure\\b[^>]*>(?:(?!<\\/figure>)[\\s\\S])*?<img\\b[^>]*\\bsrc=(["'])${mediaPath}\\1[^>]*>(?:(?!<\\/figure>)[\\s\\S])*?<\\/figure>`, 'gi'), '');
+  }
+  return sanitizeHtml(content, contentOptions(removedStorage));
+};
 
 async function init() {
   await query(`CREATE TABLE IF NOT EXISTS themes (id SERIAL PRIMARY KEY, name TEXT NOT NULL UNIQUE, created_at TIMESTAMPTZ NOT NULL DEFAULT now());
     CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now());
     CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at TIMESTAMPTZ NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now());
-    CREATE TABLE IF NOT EXISTS articles (id SERIAL PRIMARY KEY, title TEXT NOT NULL, summary TEXT NOT NULL DEFAULT '', content TEXT NOT NULL DEFAULT '', written_date DATE, language TEXT NOT NULL DEFAULT 'pt-BR', theme_id INTEGER REFERENCES themes(id), created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now());
+    CREATE TABLE IF NOT EXISTS articles (id SERIAL PRIMARY KEY, title TEXT NOT NULL, summary TEXT NOT NULL DEFAULT '', content TEXT NOT NULL DEFAULT '', content_format TEXT NOT NULL DEFAULT 'html', written_date DATE, language TEXT NOT NULL DEFAULT 'pt-BR', theme_id INTEGER REFERENCES themes(id), created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now());
     CREATE TABLE IF NOT EXISTS authors (id SERIAL PRIMARY KEY, name TEXT NOT NULL UNIQUE);
     CREATE TABLE IF NOT EXISTS article_authors (article_id INTEGER REFERENCES articles(id) ON DELETE CASCADE, author_id INTEGER REFERENCES authors(id) ON DELETE CASCADE, PRIMARY KEY(article_id,author_id));
     CREATE TABLE IF NOT EXISTS tags (id SERIAL PRIMARY KEY, name TEXT NOT NULL UNIQUE);
     CREATE TABLE IF NOT EXISTS article_tags (article_id INTEGER REFERENCES articles(id) ON DELETE CASCADE, tag_id INTEGER REFERENCES tags(id) ON DELETE CASCADE, PRIMARY KEY(article_id,tag_id));
     CREATE TABLE IF NOT EXISTS sources (id SERIAL PRIMARY KEY, title TEXT NOT NULL, url TEXT, publisher TEXT, source_date TEXT);
     CREATE TABLE IF NOT EXISTS article_sources (article_id INTEGER REFERENCES articles(id) ON DELETE CASCADE, source_id INTEGER REFERENCES sources(id) ON DELETE CASCADE, PRIMARY KEY(article_id,source_id));
-    CREATE TABLE IF NOT EXISTS attachments (id SERIAL PRIMARY KEY, article_id INTEGER NOT NULL REFERENCES articles(id) ON DELETE CASCADE, original_name TEXT NOT NULL, storage_name TEXT NOT NULL UNIQUE, mime_type TEXT NOT NULL, size_bytes INTEGER NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now());`);
+    CREATE TABLE IF NOT EXISTS attachments (id SERIAL PRIMARY KEY, article_id INTEGER NOT NULL REFERENCES articles(id) ON DELETE CASCADE, original_name TEXT NOT NULL, storage_name TEXT NOT NULL UNIQUE, mime_type TEXT NOT NULL, size_bytes INTEGER NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now());
+    ALTER TABLE articles ADD COLUMN IF NOT EXISTS content_format TEXT NOT NULL DEFAULT 'plain';
+    ALTER TABLE articles ALTER COLUMN content_format SET DEFAULT 'html';`);
   for (const name of ['Teologia', 'Filosofia', 'Culinária', 'Pensamentos']) await query('INSERT INTO themes(name) VALUES($1) ON CONFLICT DO NOTHING', [name]);
 }
 function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) { return `${salt}:${crypto.scryptSync(password, salt, 64).toString('hex')}`; }
@@ -37,6 +56,7 @@ async function userFor(req) { const id = cookies(req).biblio_session; if (!id) r
 async function createSession(res, userId) { const id = crypto.randomBytes(32).toString('hex'); await query(`INSERT INTO sessions(id,user_id,expires_at) VALUES($1,$2,now()+interval '30 days')`, [id, userId]); res.setHeader('set-cookie', `biblio_session=${id}; HttpOnly; SameSite=Strict; Path=/; Max-Age=2592000${process.env.PUBLIC_HTTPS === 'true' ? '; Secure' : ''}`); }
 async function details(id) {
   const article = (await query('SELECT a.*,t.name theme_name FROM articles a LEFT JOIN themes t ON t.id=a.theme_id WHERE a.id=$1', [id])).rows[0]; if (!article) return null;
+  article.content = article.content_format === 'html' ? cleanContent(article.content) : escapedContent(article.content);
   const [authors,tags,sources,attachments] = await Promise.all([
     query('SELECT a.id,a.name FROM authors a JOIN article_authors x ON x.author_id=a.id WHERE x.article_id=$1 ORDER BY a.name',[id]),
     query('SELECT t.id,t.name FROM tags t JOIN article_tags x ON x.tag_id=t.id WHERE x.article_id=$1 ORDER BY t.name',[id]),
@@ -45,11 +65,11 @@ async function details(id) {
   ]); article.theme = article.theme_id ? { id: article.theme_id, name: article.theme_name } : null; delete article.theme_name; article.authors=authors.rows; article.tags=tags.rows; article.sources=sources.rows; article.attachments=attachments.rows; return article;
 }
 async function saveArticle(id, payload) {
-  const fields={title:textValue(payload.title,300),summary:textValue(payload.summary,2000),content:textValue(payload.content),written_date:textValue(payload.written_date,30)||null,language:textValue(payload.language,20)||'pt-BR',theme_id:Number(payload.theme_id)};
+  const fields={title:textValue(payload.title,300),summary:textValue(payload.summary,2000),content:cleanContent(payload.content),written_date:textValue(payload.written_date,30)||null,language:textValue(payload.language,20)||'pt-BR',theme_id:Number(payload.theme_id)};
   if(!fields.title) throw new Error('O título é obrigatório.'); if(!Number.isInteger(fields.theme_id)||(await query('SELECT 1 FROM themes WHERE id=$1',[fields.theme_id])).rowCount===0) throw new Error('Escolha um tema para o artigo.');
   const client=await pool.connect(); try { await client.query('BEGIN'); let articleId=id;
-    if(id){const r=await client.query('UPDATE articles SET title=$1,summary=$2,content=$3,written_date=$4,language=$5,theme_id=$6,updated_at=now() WHERE id=$7',[fields.title,fields.summary,fields.content,fields.written_date,fields.language,fields.theme_id,id]);if(!r.rowCount)throw new Error('Artigo não encontrado.');}
-    else articleId=(await client.query('INSERT INTO articles(title,summary,content,written_date,language,theme_id) VALUES($1,$2,$3,$4,$5,$6) RETURNING id',[fields.title,fields.summary,fields.content,fields.written_date,fields.language,fields.theme_id])).rows[0].id;
+    if(id){const r=await client.query("UPDATE articles SET title=$1,summary=$2,content=$3,content_format='html',written_date=$4,language=$5,theme_id=$6,updated_at=now() WHERE id=$7",[fields.title,fields.summary,fields.content,fields.written_date,fields.language,fields.theme_id,id]);if(!r.rowCount)throw new Error('Artigo não encontrado.');}
+    else articleId=(await client.query("INSERT INTO articles(title,summary,content,content_format,written_date,language,theme_id) VALUES($1,$2,$3,'html',$4,$5,$6) RETURNING id",[fields.title,fields.summary,fields.content,fields.written_date,fields.language,fields.theme_id])).rows[0].id;
     await Promise.all(['article_authors','article_tags','article_sources'].map(table=>client.query(`DELETE FROM ${table} WHERE article_id=$1`,[articleId])));
     for(const name of list(payload.authors)){const r=await client.query('INSERT INTO authors(name) VALUES($1) ON CONFLICT(name) DO UPDATE SET name=EXCLUDED.name RETURNING id',[name]);await client.query('INSERT INTO article_authors(article_id,author_id) VALUES($1,$2) ON CONFLICT DO NOTHING',[articleId,r.rows[0].id]);}
     for(const name of list(payload.tags)){const r=await client.query('INSERT INTO tags(name) VALUES($1) ON CONFLICT(name) DO UPDATE SET name=EXCLUDED.name RETURNING id',[name]);await client.query('INSERT INTO article_tags(article_id,tag_id) VALUES($1,$2) ON CONFLICT DO NOTHING',[articleId,r.rows[0].id]);}
@@ -67,12 +87,13 @@ const server=http.createServer(async(req,res)=>{const url=new URL(req.url,`http:
   if(req.method==='POST'&&url.pathname==='/api/auth/logout'){const id=cookies(req).biblio_session;if(id)await query('DELETE FROM sessions WHERE id=$1',[id]);res.setHeader('set-cookie','biblio_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');return json(res,204,{});}
   if((url.pathname.startsWith('/api/')||url.pathname.startsWith('/media/'))&&url.pathname!=='/api/health'&&!(await userFor(req)))return json(res,401,{error:'Autenticação necessária.'});
   if(req.method==='GET'&&url.pathname==='/api/health')return json(res,200,{ok:true,database:'postgresql'});
-  if(url.pathname.startsWith('/media/')){const file=path.join(MEDIA_DIR,path.basename(url.pathname));if(!fs.existsSync(file))return json(res,404,{error:'Arquivo não encontrado.'});res.writeHead(200,{'content-type':'application/octet-stream','content-disposition':'inline'});return fs.createReadStream(file).pipe(res);}
+  if(url.pathname.startsWith('/media/')){const storage=path.basename(decoded(url.pathname));const attachment=(await query('SELECT mime_type FROM attachments WHERE storage_name=$1',[storage])).rows[0];const file=path.join(MEDIA_DIR,storage);if(!attachment||!fs.existsSync(file))return json(res,404,{error:'Arquivo não encontrado.'});res.writeHead(200,{'content-type':attachment.mime_type,'content-disposition':'inline','x-content-type-options':'nosniff'});return fs.createReadStream(file).pipe(res);}
   if(req.method==='GET'&&url.pathname==='/api/themes')return json(res,200,(await query('SELECT t.id,t.name,t.created_at,count(a.id)::int article_count FROM themes t LEFT JOIN articles a ON a.theme_id=t.id GROUP BY t.id ORDER BY t.name')).rows);
   if(req.method==='POST'&&url.pathname==='/api/themes'){const name=textValue((await body(req)).name,80);if(name.length<2)return json(res,400,{error:'Informe um tema com pelo menos 2 caracteres.'});const r=await query('INSERT INTO themes(name) VALUES($1) RETURNING id,name,created_at',[name]);return json(res,201,{...r.rows[0],article_count:0});}
   if(req.method==='GET'&&url.pathname==='/api/articles'){const q=textValue(url.searchParams.get('q'),200),theme=Number(url.searchParams.get('theme'));let sql='SELECT id FROM articles',args=[];if(q){args.push('%'+q+'%');sql+=' WHERE title ILIKE $1 OR summary ILIKE $1 OR content ILIKE $1';}else if(Number.isInteger(theme)&&theme>0){args.push(theme);sql+=' WHERE theme_id=$1';}sql+=' ORDER BY updated_at DESC LIMIT 100';const ids=(await query(sql,args)).rows.map(x=>x.id);return json(res,200,await Promise.all(ids.map(details)));}
-  const match=url.pathname.match(/^\/api\/articles\/(\d+)$/);if(req.method==='GET'&&match){const a=await details(Number(match[1]));return a?json(res,200,a):json(res,404,{error:'Artigo não encontrado.'});}if(req.method==='POST'&&url.pathname==='/api/articles')return json(res,201,await details(await saveArticle(null,await body(req))));if(req.method==='PUT'&&match)return json(res,200,await details(await saveArticle(Number(match[1]),await body(req))));if(req.method==='DELETE'&&match){await query('DELETE FROM articles WHERE id=$1',[Number(match[1])]);return json(res,204,{});}
-  const upload=url.pathname.match(/^\/api\/articles\/(\d+)\/attachments$/);if(req.method==='POST'&&upload){const p=await body(req),raw=String(p.dataUrl||''),parts=raw.match(/^data:([^;]+);base64,(.+)$/);if(!parts||!/^image\/(jpeg|png|gif|webp)$|^video\/(mp4|webm|quicktime)$/.test(parts[1]))return json(res,400,{error:'Envie uma imagem ou vídeo compatível.'});const buffer=Buffer.from(parts[2],'base64');if(buffer.length>25*1024*1024)return json(res,400,{error:'Arquivo muito grande (máximo de 25 MB).'});const storage=`${crypto.randomUUID()}-${path.basename(String(p.name||'arquivo')).replace(/[^a-zA-Z0-9._-]/g,'_')}`;fs.writeFileSync(path.join(MEDIA_DIR,storage),buffer);const r=await query('INSERT INTO attachments(article_id,original_name,storage_name,mime_type,size_bytes) VALUES($1,$2,$3,$4,$5) RETURNING *',[Number(upload[1]),path.basename(String(p.name||'arquivo')),storage,parts[1],buffer.length]);return json(res,201,r.rows[0]);}
+  const match=url.pathname.match(/^\/api\/articles\/(\d+)$/);if(req.method==='GET'&&match){const a=await details(Number(match[1]));return a?json(res,200,a):json(res,404,{error:'Artigo não encontrado.'});}if(req.method==='POST'&&url.pathname==='/api/articles')return json(res,201,await details(await saveArticle(null,await body(req))));if(req.method==='PUT'&&match)return json(res,200,await details(await saveArticle(Number(match[1]),await body(req))));if(req.method==='DELETE'&&match){const files=(await query('SELECT storage_name FROM attachments WHERE article_id=$1',[Number(match[1])])).rows;await query('DELETE FROM articles WHERE id=$1',[Number(match[1])]);for(const item of files)fs.rmSync(path.join(MEDIA_DIR,item.storage_name),{force:true});return json(res,204,{});}
+  const upload=url.pathname.match(/^\/api\/articles\/(\d+)\/attachments$/);if(req.method==='POST'&&upload){const articleId=Number(upload[1]);if(!(await query('SELECT 1 FROM articles WHERE id=$1',[articleId])).rowCount)return json(res,404,{error:'Artigo não encontrado.'});const p=await body(req),raw=String(p.dataUrl||''),parts=raw.match(/^data:([^;]+);base64,(.+)$/);if(!parts||!/^image\/(jpeg|png|gif|webp)$|^video\/(mp4|webm|quicktime)$/.test(parts[1]))return json(res,400,{error:'Envie uma imagem ou vídeo compatível.'});const buffer=Buffer.from(parts[2],'base64');if(buffer.length>25*1024*1024)return json(res,400,{error:'Arquivo muito grande (máximo de 25 MB).'});const storage=`${crypto.randomUUID()}-${path.basename(String(p.name||'arquivo')).replace(/[^a-zA-Z0-9._-]/g,'_')}`,file=path.join(MEDIA_DIR,storage);fs.writeFileSync(file,buffer);try{const r=await query('INSERT INTO attachments(article_id,original_name,storage_name,mime_type,size_bytes) VALUES($1,$2,$3,$4,$5) RETURNING *',[articleId,path.basename(String(p.name||'arquivo')),storage,parts[1],buffer.length]);return json(res,201,r.rows[0]);}catch(error){fs.rmSync(file,{force:true});throw error;}}
+  const attachmentMatch=url.pathname.match(/^\/api\/attachments\/(\d+)$/);if(req.method==='DELETE'&&attachmentMatch){const item=(await query('SELECT * FROM attachments WHERE id=$1',[Number(attachmentMatch[1])])).rows[0];if(!item)return json(res,404,{error:'Anexo não encontrado.'});const article=(await query('SELECT content,content_format FROM articles WHERE id=$1',[item.article_id])).rows[0];await query('DELETE FROM attachments WHERE id=$1',[item.id]);await query('UPDATE articles SET content=$1,updated_at=now() WHERE id=$2',[article?.content_format==='html'?cleanContent(article.content,item.storage_name):(article?.content||''),item.article_id]);fs.rmSync(path.join(MEDIA_DIR,item.storage_name),{force:true});return json(res,204,{});}
   if(staticFile(res,url.pathname))return;json(res,404,{error:'Rota não encontrada.'});
 }catch(error){json(res,400,{error:error.message||'Erro inesperado.'});}});
 init().then(()=>server.listen(PORT,()=>console.log(`Biblio disponível em http://localhost:${PORT} (PostgreSQL)`))).catch(error=>{console.error(error);process.exit(1);});

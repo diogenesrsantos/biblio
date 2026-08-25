@@ -2,6 +2,8 @@
 
 Biblioteca pessoal para registrar artigos, autores, fontes, etiquetas e anexos de imagem ou vídeo. Foi desenhada para uso local de uma a três pessoas.
 
+O conteúdo dos artigos possui editor visual com títulos, listas, ênfase, links, citações e imagens inseridas diretamente no texto. As imagens também podem ser coladas da área de transferência ou reutilizadas a partir do painel de mídias.
+
 ## Executar localmente
 
 Requer Node.js 22 ou superior.
@@ -62,3 +64,4 @@ O comando cria uma pasta datada com uma cópia consistente do banco e todas as m
 - Uma única conta local, protegida por senha e sessão de 30 dias.
 - A aplicação utiliza PostgreSQL; o SQLite em `data/biblio.db` é a origem histórica preservada da migração inicial.
 - Vídeos e imagens são limitados a 25 MB por arquivo.
+- O HTML produzido pelo editor é sanitizado no servidor antes de ser armazenado.

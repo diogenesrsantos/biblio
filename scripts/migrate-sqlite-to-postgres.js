@@ -20,7 +20,7 @@ const sequenceTables = ['themes', 'users', 'articles', 'authors', 'tags', 'sourc
 const columns = {
   themes: ['id', 'name', 'created_at'],
   users: ['id', 'username', 'password_hash', 'created_at'],
-  articles: ['id', 'title', 'summary', 'content', 'written_date', 'language', 'theme_id', 'created_at', 'updated_at'],
+  articles: ['id', 'title', 'summary', 'content', 'content_format', 'written_date', 'language', 'theme_id', 'created_at', 'updated_at'],
   authors: ['id', 'name'], tags: ['id', 'name'], sources: ['id', 'title', 'url', 'publisher', 'source_date'],
   attachments: ['id', 'article_id', 'original_name', 'storage_name', 'mime_type', 'size_bytes', 'created_at'],
   article_authors: ['article_id', 'author_id'], article_tags: ['article_id', 'tag_id'], article_sources: ['article_id', 'source_id']
@@ -35,7 +35,7 @@ const columns = {
       const names = columns[table];
       const marks = names.map((_, index) => `$${index + 1}`).join(', ');
       for (const row of rows) {
-        const values = names.map(name => name === 'written_date' && row[name] === '' ? null : (row[name] ?? null));
+        const values = names.map(name => name === 'content_format' ? 'plain' : (name === 'written_date' && row[name] === '' ? null : (row[name] ?? null)));
         await client.query(`INSERT INTO ${table} (${names.join(', ')}) VALUES (${marks}) ON CONFLICT DO NOTHING`, values);
       }
     }
