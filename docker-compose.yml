@@ -1,0 +1,12 @@
+services:
+  biblio:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: 8080
+      DATA_DIR: /app/data
+      PUBLIC_HTTPS: ${PUBLIC_HTTPS:-false}
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

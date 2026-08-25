@@ -1,0 +1,16 @@
+{
+  "name": "biblio-pessoal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Biblioteca pessoal de artigos, fontes e mídias.",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "backup": "node scripts/backup.js",
+    "migrate:postgres": "node scripts/migrate-sqlite-to-postgres.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.4.1",
+    "pg": "^8.16.3"
+  }
+}
