@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const readline = require('node:readline');
 const { Writable } = require('node:stream');
-const { Pool } = require('pg');
+const { createDatabase } = require('../database');
 
 const root = path.join(__dirname, '..');
 const envFile = path.join(root, '.env');
@@ -23,10 +23,6 @@ if (fs.existsSync(envFile)) {
   }
 }
 
-if (!process.env.DATABASE_URL) {
-  console.error('DATABASE_URL não foi configurada.');
-  process.exit(1);
-}
 if (!process.stdin.isTTY || !process.stdout.isTTY) {
   console.error('Execute este comando em um terminal interativo.');
   process.exit(1);
@@ -58,7 +54,8 @@ const hashPassword = password => {
 };
 
 async function main() {
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const dataDir = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(root, 'data');
+  const pool = createDatabase(path.join(dataDir, 'biblio.db'));
   try {
     const users = (await pool.query('SELECT id,username FROM users ORDER BY id')).rows;
     if (!users.length) throw new Error('Nenhuma conta foi configurada nesta instalação.');
@@ -78,22 +75,19 @@ async function main() {
     const confirmation = await askHidden('Confirme a nova senha: ');
     if (password !== confirmation) throw new Error('As senhas não coincidem.');
 
-    const client = await pool.connect();
     try {
-      await client.query('BEGIN');
-      await client.query('UPDATE users SET password_hash=$1 WHERE id=$2', [hashPassword(password), user.id]);
-      await client.query('DELETE FROM sessions WHERE user_id=$1', [user.id]);
-      await client.query('COMMIT');
+      await pool.query('BEGIN');
+      await pool.query('UPDATE users SET password_hash=$1 WHERE id=$2', [hashPassword(password), user.id]);
+      await pool.query('DELETE FROM sessions WHERE user_id=$1', [user.id]);
+      await pool.query('COMMIT');
     } catch (error) {
-      await client.query('ROLLBACK');
+      await pool.query('ROLLBACK');
       throw error;
-    } finally {
-      client.release();
     }
     console.log('Senha redefinida. Todas as sessões anteriores foram encerradas.');
   } finally {
     terminal.close();
-    await pool.end();
+    pool.close();
   }
 }
 

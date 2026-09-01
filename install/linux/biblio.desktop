@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Biblio
+Comment=Biblioteca pessoal local
+Exec=/opt/biblio/biblio
+Terminal=false
+Categories=Office;Utility;

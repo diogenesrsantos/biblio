@@ -1,4 +1,4 @@
-const CACHE = 'biblio-shell-v10';
+const CACHE = 'biblio-shell-v11';
 const ASSETS = ['/', '/style.css', '/auth.css', '/layout.css', '/editor.css', '/fixes.css', '/search.css', '/topbar.css', '/media.css', '/app.js', '/manifest.webmanifest', '/icon.svg'];
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting())));
 self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim())));

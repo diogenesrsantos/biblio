@@ -2,16 +2,24 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
-const { Pool } = require('pg');
+const { createDatabase } = require('./database');
 const sanitizeHtml = require('sanitize-html');
+const { backupName, createBackup } = require('./backup-service');
+const { restoreBackup } = require('./restore-service');
 
 const ROOT = __dirname;
 for (const line of fs.existsSync(path.join(ROOT, '.env')) ? fs.readFileSync(path.join(ROOT, '.env'), 'utf8').split(/\r?\n/) : []) { const [key, ...value] = line.split('='); if (key && !process.env[key]) process.env[key] = value.join('='); }
-if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL não foi configurada. Veja .env.example.');
 const PORT = Number(process.env.PORT || 8080);
-const MEDIA_DIR = path.join(ROOT, 'data', 'media');
+const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(ROOT, 'data');
+const DB_FILE = path.join(DATA_DIR, 'biblio.db');
+const RESTORE_FILE = path.join(DATA_DIR, '.biblio-restore-pending.zip');
+if (fs.existsSync(RESTORE_FILE)) {
+  restoreBackup(fs.readFileSync(RESTORE_FILE), DATA_DIR);
+  fs.rmSync(RESTORE_FILE, { force: true });
+}
+const MEDIA_DIR = path.join(DATA_DIR, 'media');
 fs.mkdirSync(MEDIA_DIR, { recursive: true });
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const pool = createDatabase(DB_FILE);
 const query = (text, values = []) => pool.query(text, values);
 const textValue = (value, max = 1000000) => String(value || '').trim().slice(0, max);
 const list = value => [...new Set(String(value || '').split(',').map(v => v.trim()).filter(Boolean))];
@@ -34,19 +42,19 @@ const cleanContent = (value, removedStorage) => {
 };
 
 async function init() {
-  await query(`CREATE TABLE IF NOT EXISTS themes (id SERIAL PRIMARY KEY, name TEXT NOT NULL UNIQUE, created_at TIMESTAMPTZ NOT NULL DEFAULT now());
-    CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now());
-    CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at TIMESTAMPTZ NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now());
-    CREATE TABLE IF NOT EXISTS articles (id SERIAL PRIMARY KEY, title TEXT NOT NULL, summary TEXT NOT NULL DEFAULT '', content TEXT NOT NULL DEFAULT '', content_format TEXT NOT NULL DEFAULT 'html', written_date DATE, language TEXT NOT NULL DEFAULT 'pt-BR', theme_id INTEGER REFERENCES themes(id), created_at TIMESTAMPTZ NOT NULL DEFAULT now(), updated_at TIMESTAMPTZ NOT NULL DEFAULT now());
-    CREATE TABLE IF NOT EXISTS authors (id SERIAL PRIMARY KEY, name TEXT NOT NULL UNIQUE);
+  await query(`CREATE TABLE IF NOT EXISTS themes (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS articles (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, summary TEXT NOT NULL DEFAULT '', content TEXT NOT NULL DEFAULT '', content_format TEXT NOT NULL DEFAULT 'html', written_date TEXT, language TEXT NOT NULL DEFAULT 'pt-BR', theme_id INTEGER REFERENCES themes(id), created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS authors (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE);
     CREATE TABLE IF NOT EXISTS article_authors (article_id INTEGER REFERENCES articles(id) ON DELETE CASCADE, author_id INTEGER REFERENCES authors(id) ON DELETE CASCADE, PRIMARY KEY(article_id,author_id));
-    CREATE TABLE IF NOT EXISTS tags (id SERIAL PRIMARY KEY, name TEXT NOT NULL UNIQUE);
+    CREATE TABLE IF NOT EXISTS tags (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE);
     CREATE TABLE IF NOT EXISTS article_tags (article_id INTEGER REFERENCES articles(id) ON DELETE CASCADE, tag_id INTEGER REFERENCES tags(id) ON DELETE CASCADE, PRIMARY KEY(article_id,tag_id));
-    CREATE TABLE IF NOT EXISTS sources (id SERIAL PRIMARY KEY, title TEXT NOT NULL, url TEXT, publisher TEXT, source_date TEXT);
+    CREATE TABLE IF NOT EXISTS sources (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, url TEXT, publisher TEXT, source_date TEXT);
     CREATE TABLE IF NOT EXISTS article_sources (article_id INTEGER REFERENCES articles(id) ON DELETE CASCADE, source_id INTEGER REFERENCES sources(id) ON DELETE CASCADE, PRIMARY KEY(article_id,source_id));
-    CREATE TABLE IF NOT EXISTS attachments (id SERIAL PRIMARY KEY, article_id INTEGER NOT NULL REFERENCES articles(id) ON DELETE CASCADE, original_name TEXT NOT NULL, storage_name TEXT NOT NULL UNIQUE, mime_type TEXT NOT NULL, size_bytes INTEGER NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now());
-    ALTER TABLE articles ADD COLUMN IF NOT EXISTS content_format TEXT NOT NULL DEFAULT 'plain';
-    ALTER TABLE articles ALTER COLUMN content_format SET DEFAULT 'html';`);
+    CREATE TABLE IF NOT EXISTS attachments (id INTEGER PRIMARY KEY AUTOINCREMENT, article_id INTEGER NOT NULL REFERENCES articles(id) ON DELETE CASCADE, original_name TEXT NOT NULL, storage_name TEXT NOT NULL UNIQUE, mime_type TEXT NOT NULL, size_bytes INTEGER NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);`);
+  const articleColumns = (await query('PRAGMA table_info(articles)')).rows.map(column => column.name);
+  if (!articleColumns.includes('content_format')) await query("ALTER TABLE articles ADD COLUMN content_format TEXT NOT NULL DEFAULT 'plain'");
   for (const name of ['Teologia', 'Filosofia', 'Culinária', 'Pensamentos']) await query('INSERT INTO themes(name) VALUES($1) ON CONFLICT DO NOTHING', [name]);
 }
 function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) { return `${salt}:${crypto.scryptSync(password, salt, 64).toString('hex')}`; }
@@ -78,7 +86,7 @@ async function saveArticle(id, payload) {
   }catch(error){await client.query('ROLLBACK');throw error;}finally{client.release();}
 }
 function json(res,status,body){res.writeHead(status,{'content-type':'application/json; charset=utf-8'});res.end(JSON.stringify(body));}
-function body(req){return new Promise((resolve,reject)=>{let raw='';req.on('data',c=>{raw+=c;if(raw.length>35*1024*1024)reject(new Error('Arquivo muito grande (máximo de 25 MB).'));});req.on('end',()=>{try{resolve(raw?JSON.parse(raw):{});}catch{reject(new Error('JSON inválido.'));}});req.on('error',reject);});}
+function body(req){return new Promise((resolve,reject)=>{let raw='';req.on('data',c=>{raw+=c;if(raw.length>250*1024*1024)reject(new Error('Arquivo muito grande (máximo de 180 MB).'));});req.on('end',()=>{try{resolve(raw?JSON.parse(raw):{});}catch{reject(new Error('JSON inválido.'));}});req.on('error',reject);});}
 function staticFile(res,pathname){const file=pathname==='/'?'index.html':pathname.slice(1);const target=path.resolve(ROOT,'public',file);if(!target.startsWith(path.resolve(ROOT,'public')+path.sep)||!fs.existsSync(target))return false;const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.webmanifest':'application/manifest+json'};res.writeHead(200,{'content-type':types[path.extname(target)]||'application/octet-stream'});fs.createReadStream(target).pipe(res);return true;}
 const server=http.createServer(async(req,res)=>{const url=new URL(req.url,`http://${req.headers.host||'localhost'}`);try{
   if(req.method==='GET'&&url.pathname==='/api/auth/status'){const user=await userFor(req);return json(res,200,{authenticated:Boolean(user),configured:(await query('SELECT 1 FROM users LIMIT 1')).rowCount>0,user});}
@@ -86,7 +94,9 @@ const server=http.createServer(async(req,res)=>{const url=new URL(req.url,`http:
   if(req.method==='POST'&&url.pathname==='/api/auth/login'){const p=await body(req),u=(await query('SELECT * FROM users WHERE lower(username)=lower($1)',[textValue(p.username,60)])).rows[0];if(!u||!validPassword(p.password,u.password_hash))return json(res,401,{error:'Usuário ou senha inválidos.'});await createSession(res,u.id);return json(res,200,{username:u.username});}
   if(req.method==='POST'&&url.pathname==='/api/auth/logout'){const id=cookies(req).biblio_session;if(id)await query('DELETE FROM sessions WHERE id=$1',[id]);res.setHeader('set-cookie','biblio_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');return json(res,204,{});}
   if((url.pathname.startsWith('/api/')||url.pathname.startsWith('/media/'))&&url.pathname!=='/api/health'&&!(await userFor(req)))return json(res,401,{error:'Autenticação necessária.'});
-  if(req.method==='GET'&&url.pathname==='/api/health')return json(res,200,{ok:true,database:'postgresql'});
+  if(req.method==='GET'&&url.pathname==='/api/health')return json(res,200,{ok:true,database:'sqlite'});
+  if(req.method==='GET'&&url.pathname==='/api/backup'){pool.checkpoint();const archive=await createBackup(DATA_DIR);res.writeHead(200,{'content-type':'application/zip','content-disposition':`attachment; filename="${backupName()}"`,'content-length':archive.length,'cache-control':'no-store'});return res.end(archive);}
+  if(req.method==='POST'&&url.pathname==='/api/restore'){const payload=await body(req),match=String(payload.dataUrl||'').match(/^data:application\/(zip|x-zip-compressed);base64,(.+)$/);if(!match)return json(res,400,{error:'Selecione um arquivo ZIP de backup da Biblio.'});const archive=Buffer.from(match[2],'base64');if(archive.length>180*1024*1024)return json(res,400,{error:'Arquivo muito grande (máximo de 180 MB).'});const check=new (require('adm-zip'))(archive);if(!check.getEntry('manifest.json')||!check.getEntry('data/biblio.db'))return json(res,400,{error:'Esta não é uma cópia válida da Biblio.'});fs.writeFileSync(RESTORE_FILE,archive,{flag:'w',mode:0o600});json(res,202,{ok:true});return setTimeout(()=>process.exit(75),150);}
   if(url.pathname.startsWith('/media/')){const storage=path.basename(decoded(url.pathname));const attachment=(await query('SELECT mime_type FROM attachments WHERE storage_name=$1',[storage])).rows[0];const file=path.join(MEDIA_DIR,storage);if(!attachment||!fs.existsSync(file))return json(res,404,{error:'Arquivo não encontrado.'});res.writeHead(200,{'content-type':attachment.mime_type,'content-disposition':'inline','x-content-type-options':'nosniff'});return fs.createReadStream(file).pipe(res);}
   if(req.method==='GET'&&url.pathname==='/api/themes')return json(res,200,(await query('SELECT t.id,t.name,t.created_at,count(a.id)::int article_count FROM themes t LEFT JOIN articles a ON a.theme_id=t.id GROUP BY t.id ORDER BY t.name')).rows);
   if(req.method==='POST'&&url.pathname==='/api/themes'){const name=textValue((await body(req)).name,80);if(name.length<2)return json(res,400,{error:'Informe um tema com pelo menos 2 caracteres.'});const r=await query('INSERT INTO themes(name) VALUES($1) RETURNING id,name,created_at',[name]);return json(res,201,{...r.rows[0],article_count:0});}
@@ -96,4 +106,4 @@ const server=http.createServer(async(req,res)=>{const url=new URL(req.url,`http:
   const attachmentMatch=url.pathname.match(/^\/api\/attachments\/(\d+)$/);if(req.method==='DELETE'&&attachmentMatch){const item=(await query('SELECT * FROM attachments WHERE id=$1',[Number(attachmentMatch[1])])).rows[0];if(!item)return json(res,404,{error:'Anexo não encontrado.'});const article=(await query('SELECT content,content_format FROM articles WHERE id=$1',[item.article_id])).rows[0];await query('DELETE FROM attachments WHERE id=$1',[item.id]);await query('UPDATE articles SET content=$1,updated_at=now() WHERE id=$2',[article?.content_format==='html'?cleanContent(article.content,item.storage_name):(article?.content||''),item.article_id]);fs.rmSync(path.join(MEDIA_DIR,item.storage_name),{force:true});return json(res,204,{});}
   if(staticFile(res,url.pathname))return;json(res,404,{error:'Rota não encontrada.'});
 }catch(error){json(res,400,{error:error.message||'Erro inesperado.'});}});
-init().then(()=>server.listen(PORT,()=>console.log(`Biblio disponível em http://localhost:${PORT} (PostgreSQL)`))).catch(error=>{console.error(error);process.exit(1);});
+init().then(()=>server.listen(PORT,'127.0.0.1',()=>console.log(`Biblio disponível em http://127.0.0.1:${PORT} (SQLite local)`))).catch(error=>{console.error(error);process.exit(1);});

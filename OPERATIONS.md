@@ -1,5 +1,7 @@
 # Operação e evolução da Biblio
 
+> A distribuição local atual usa SQLite e é iniciada por `npm run open`. Este documento preserva instruções da implantação PostgreSQL na VPS como referência de legado; elas não se aplicam aos instaladores locais.
+
 Este documento registra a configuração atual do sistema. Não armazene senhas, chaves ou URLs com credenciais neste repositório.
 
 ## Arquitetura

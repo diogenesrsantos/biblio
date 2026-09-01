@@ -55,6 +55,13 @@ function setupSearchButton() {
   button.onclick = () => renderList();
   $('.search').append(button);
 }
+function setupRestore() {
+  const input = document.createElement('input'); input.type = 'file'; input.accept = '.zip,application/zip'; input.hidden = true;
+  const button = document.createElement('button'); button.type = 'button'; button.className = 'backupButton'; button.textContent = 'Restaurar cópia';
+  button.onclick = () => input.click();
+  input.onchange = async () => { const file = input.files[0]; if (!file) return; if (!confirm('A restauração substituirá a biblioteca atual. Uma cópia dos dados atuais será preservada. Continuar?')) return; try { const dataUrl = await readFile(file); await api('/api/restore', { method: 'POST', body: JSON.stringify({ dataUrl }) }); toast('Restauração em andamento. A Biblio será reiniciada.'); } catch (error) { toast(error.message); } finally { input.value = ''; } };
+  document.querySelector('.headerActions').prepend(input, button);
+}
 
 function setPreviewMode(enabled) {
   previewMode = enabled;
@@ -382,6 +389,7 @@ $('#logout').onclick = async () => { await api('/api/auth/logout', { method: 'PO
 
 setupCollapsibleHeader();
 setupSearchButton();
+setupRestore();
 setupImageModal();
 setupRichEditor();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
