@@ -71,3 +71,16 @@ nginx -t
 ```
 
 O endpoint `/api/health` deve retornar `{"ok":true,"database":"postgresql"}`.
+
+## Redefinição de senha
+
+A senha armazenada não é recuperável. Para definir uma nova senha e invalidar todas as sessões da conta:
+
+```bash
+set -a
+. /etc/biblio/biblio.env
+set +a
+sudo --preserve-env=DATABASE_URL -u biblio npm run reset-password --prefix /var/www/biblio
+```
+
+O comando deve ser executado em um terminal interativo. Ele usa o `DATABASE_URL` configurado no ambiente do processo ou no arquivo `.env` local.

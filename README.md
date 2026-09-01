@@ -23,6 +23,23 @@ Para desenvolvimento com reinício automático:
 npm run dev
 ```
 
+## Redefinir a senha
+
+Se a senha da conta for esquecida, ela não pode ser recuperada a partir do hash armazenado. Redefina-a em um terminal no diretório da aplicação:
+
+```bash
+npm run reset-password
+```
+
+O comando não exibe a senha digitada, exige ao menos 12 caracteres e encerra todas as sessões anteriores da conta. Na VPS, carregue a configuração privada e execute-o como o usuário do serviço:
+
+```bash
+set -a
+. /etc/biblio/biblio.env
+set +a
+sudo --preserve-env=DATABASE_URL -u biblio npm run reset-password --prefix /var/www/biblio
+```
+
 ## Executar com Docker
 
 Após instalar Docker Desktop (Windows) ou Docker Engine (Linux):
