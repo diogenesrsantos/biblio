@@ -1,10 +1,14 @@
 # Biblio
 
+O estado técnico consolidado, as decisões de arquitetura e as pendências estão registrados em [PROJETO.md](PROJETO.md).
+
 Biblioteca pessoal para registrar artigos, autores, fontes, etiquetas e anexos de imagem ou vídeo. Foi desenhada para uso local de uma a três pessoas.
 
 O conteúdo dos artigos possui editor visual com títulos, listas, ênfase, links, citações e imagens inseridas diretamente no texto. As imagens também podem ser coladas da área de transferência ou reutilizadas a partir do painel de mídias.
 
 Consulte [INSTALL.md](INSTALL.md) para gerar e testar instaladores de Windows e Linux.
+
+Para uma implantação dedicada em VPS, use preferencialmente [VPS-SQLITE-NGINX.md](VPS-SQLITE-NGINX.md). A alternativa [VPS-POSTGRESQL-NGINX.md](VPS-POSTGRESQL-NGINX.md) usa uma edição PostgreSQL específica, diferente da distribuição local SQLite.
 
 ## Executar localmente
 

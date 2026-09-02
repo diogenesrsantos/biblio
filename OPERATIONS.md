@@ -2,6 +2,8 @@
 
 > A distribuição local atual usa SQLite e é iniciada por `npm run open`. Este documento preserva instruções da implantação PostgreSQL na VPS como referência de legado; elas não se aplicam aos instaladores locais.
 
+Para uma nova instalação em VPS usando a versão atual, siga [VPS-SQLITE-NGINX.md](VPS-SQLITE-NGINX.md). As seções PostgreSQL abaixo devem ser consideradas apenas referência da edição anterior.
+
 Este documento registra a configuração atual do sistema. Não armazene senhas, chaves ou URLs com credenciais neste repositório.
 
 ## Arquitetura
