@@ -9,12 +9,12 @@ jobs:
   windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npm run rebuild:desktop
-      - run: npm run dist -- --win
+      - run: npm run dist -- --win --config.npmRebuild=false
       - uses: actions/upload-artifact@v4
         with:
           name: Biblio-Windows
@@ -24,12 +24,12 @@ jobs:
   linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npm run rebuild:desktop
-      - run: npm run dist -- --linux
+      - run: npm run dist -- --linux --config.npmRebuild=false
       - uses: actions/upload-artifact@v4
         with:
           name: Biblio-Linux
