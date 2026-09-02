@@ -3,14 +3,37 @@
   "version": "0.1.0",
   "private": true,
   "description": "Biblioteca pessoal de artigos, fontes e mídias.",
+  "author": { "name": "Diogenes Santos", "email": "diogenesrsantos@users.noreply.github.com" },
+  "main": "desktop.js",
   "scripts": {
     "start": "node server.js",
+    "open": "node scripts/launch.js",
     "dev": "node --watch server.js",
     "backup": "node scripts/backup.js",
-    "migrate:postgres": "node scripts/migrate-sqlite-to-postgres.js"
+    "restore": "node scripts/restore.js",
+    "rebuild:desktop": "electron-builder install-app-deps",
+    "dist": "electron-builder",
+    "migrate:postgres": "node scripts/migrate-sqlite-to-postgres.js",
+    "reset-password": "node scripts/reset-password.js"
   },
   "dependencies": {
+    "adm-zip": "^0.5.16",
     "better-sqlite3": "^12.4.1",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "sanitize-html": "^2.17.7"
+  },
+  "build": {
+    "appId": "net.provizi.biblio",
+    "productName": "Biblio",
+    "asar": true,
+    "asarUnpack": ["node_modules/better-sqlite3/**"],
+    "files": ["**/*", "!data{,/**/*}", "!dist{,/**/*}", "!install{,/**/*}", "!node_modules/.cache{,/**/*}"],
+    "linux": { "category": "Office", "target": ["AppImage", "deb"] },
+    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }] },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "createStartMenuShortcut": true }
+  },
+  "devDependencies": {
+    "electron": "^44.1.1",
+    "electron-builder": "^26.15.3"
   }
 }

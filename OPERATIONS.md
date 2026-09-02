@@ -1,5 +1,7 @@
 # Operação e evolução da Biblio
 
+> A distribuição local atual usa SQLite e é iniciada por `npm run open`. Este documento preserva instruções da implantação PostgreSQL na VPS como referência de legado; elas não se aplicam aos instaladores locais.
+
 Este documento registra a configuração atual do sistema. Não armazene senhas, chaves ou URLs com credenciais neste repositório.
 
 ## Arquitetura
@@ -71,3 +73,16 @@ nginx -t
 ```
 
 O endpoint `/api/health` deve retornar `{"ok":true,"database":"postgresql"}`.
+
+## Redefinição de senha
+
+A senha armazenada não é recuperável. Para definir uma nova senha e invalidar todas as sessões da conta:
+
+```bash
+set -a
+. /etc/biblio/biblio.env
+set +a
+sudo --preserve-env=DATABASE_URL -u biblio npm run reset-password --prefix /var/www/biblio
+```
+
+O comando deve ser executado em um terminal interativo. Ele usa o `DATABASE_URL` configurado no ambiente do processo ou no arquivo `.env` local.
