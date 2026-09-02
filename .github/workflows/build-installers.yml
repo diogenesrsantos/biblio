@@ -17,7 +17,7 @@ jobs:
       - name: Gerar instalador Windows
         shell: pwsh
         run: |
-          npm run dist -- --win --config.npmRebuild=false 2>&1 | Tee-Object -FilePath build-windows.log
+          npm run dist -- --win --config.npmRebuild=false --publish never 2>&1 | Tee-Object -FilePath build-windows.log
           if ($LASTEXITCODE -ne 0) {
             Get-Content build-windows.log -Tail 30 | ForEach-Object { Write-Output "::error::$($_ -replace '%','%25')" }
             exit 1
@@ -40,7 +40,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          npm run dist -- --linux --config.npmRebuild=false 2>&1 | tee build-linux.log || {
+          npm run dist -- --linux --config.npmRebuild=false --publish never 2>&1 | tee build-linux.log || {
             status=$?
             tail -n 30 build-linux.log | sed 's/%/%25/g; s/^/::error::/'
             exit "$status"
