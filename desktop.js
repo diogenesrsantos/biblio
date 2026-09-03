@@ -8,6 +8,7 @@ let server;
 let window;
 let serverError = '';
 let logFile;
+let dataDir;
 
 function log(message) {
   try {
@@ -21,12 +22,27 @@ function errorText(error) {
   return error?.stack || error?.message || String(error);
 }
 
+function prepareDataDir() {
+  const userData = app.getPath('userData');
+  dataDir = path.join(userData, 'data');
+  fs.mkdirSync(dataDir, { recursive: true });
+  for (const name of ['biblio.db', 'biblio.db-wal', 'biblio.db-shm', 'media', '.biblio-restore-pending.zip']) {
+    const previous = path.join(userData, name);
+    const destination = path.join(dataDir, name);
+    if (fs.existsSync(previous) && !fs.existsSync(destination)) {
+      fs.renameSync(previous, destination);
+      log(`Dados anteriores migrados: ${name}`);
+    }
+  }
+  log(`Diretório da biblioteca preparado: ${dataDir}`);
+}
+
 function startServer() {
   serverError = '';
   const modulePath = path.join(__dirname, 'server.js');
-  log(`Iniciando servidor: module=${modulePath} data=${app.getPath('userData')} port=${port} packaged=${app.isPackaged}`);
+  log(`Iniciando servidor: module=${modulePath} data=${dataDir} port=${port} packaged=${app.isPackaged}`);
   server = utilityProcess.fork(modulePath, [], {
-    env: { ...process.env, PORT: String(port), DATA_DIR: app.getPath('userData') },
+    env: { ...process.env, PORT: String(port), DATA_DIR: dataDir },
     stdio: 'pipe',
     serviceName: 'Biblio Server'
   });
@@ -77,7 +93,7 @@ process.on('uncaughtException', error => {
 });
 process.on('unhandledRejection', error => log(`Rejeição não tratada: ${errorText(error)}`));
 app.on('child-process-gone', (_, details) => log(`Processo auxiliar encerrado: ${JSON.stringify(details)}`));
-app.whenReady().then(() => { log('Electron pronto.'); startServer(); return openWindow(); }).catch(error => {
+app.whenReady().then(() => { log('Electron pronto.'); prepareDataDir(); startServer(); return openWindow(); }).catch(error => {
   log(`Falha ao abrir aplicação: ${errorText(error)}`);
   dialog.showErrorBox('Não foi possível abrir a Biblio', `${error.message}\n\nDiagnóstico: ${logFile}`);
   app.quit();

@@ -1,6 +1,6 @@
 {
   "name": "biblio-pessoal",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "private": true,
   "description": "Biblioteca pessoal de artigos, fontes e mídias.",
   "author": { "name": "Diogenes Santos", "email": "diogenesrsantos@users.noreply.github.com" },
