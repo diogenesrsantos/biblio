@@ -1,6 +1,6 @@
 {
   "name": "biblio-pessoal",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "description": "Biblioteca pessoal de artigos, fontes e mídias.",
   "author": { "name": "Diogenes Santos", "email": "diogenesrsantos@users.noreply.github.com" },
@@ -27,7 +27,7 @@
     "productName": "Biblio",
     "asar": true,
     "asarUnpack": ["node_modules/better-sqlite3/**"],
-    "files": ["**/*", "!data{,/**/*}", "!dist{,/**/*}", "!install{,/**/*}", "!node_modules/.cache{,/**/*}"],
+    "files": ["**/*", "!data{,/**/*}", "!dist{,/**/*}", "!install{,/**/*}", "!node_modules/.cache{,/**/*}", "!build-*.log", "!testes{,/**/*}"],
     "linux": { "category": "Office", "target": ["AppImage", "deb"] },
     "win": { "target": [{ "target": "nsis", "arch": ["x64"] }] },
     "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "createStartMenuShortcut": true }

@@ -20,11 +20,13 @@ jobs:
       - name: Gerar instalador Windows
         shell: pwsh
         run: |
-          npm run dist -- --win --config.npmRebuild=false --publish never 2>&1 | Tee-Object -FilePath build-windows.log
+          $buildLog = Join-Path $env:RUNNER_TEMP 'biblio-build-windows.log'
+          npm run dist -- --win --config.npmRebuild=false --publish never 2>&1 | Tee-Object -FilePath $buildLog
           if ($LASTEXITCODE -ne 0) {
-            Get-Content build-windows.log -Tail 30 | ForEach-Object { Write-Output "::error::$($_ -replace '%','%25')" }
+            Get-Content $buildLog -Tail 30 | ForEach-Object { Write-Output "::error::$($_ -replace '%','%25')" }
             exit 1
           }
+          node -e "const asar=require('@electron/asar'); JSON.parse(asar.extractFile('dist/win-unpacked/resources/app.asar','package.json').toString()); console.log('app.asar do Windows validado')"
       - uses: actions/upload-artifact@v4
         with:
           name: Biblio-Windows
@@ -43,11 +45,13 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          npm run dist -- --linux --config.npmRebuild=false --publish never 2>&1 | tee build-linux.log || {
+          build_log="$RUNNER_TEMP/biblio-build-linux.log"
+          npm run dist -- --linux --config.npmRebuild=false --publish never 2>&1 | tee "$build_log" || {
             status=$?
-            tail -n 30 build-linux.log | sed 's/%/%25/g; s/^/::error::/'
+            tail -n 30 "$build_log" | sed 's/%/%25/g; s/^/::error::/'
             exit "$status"
           }
+          node -e "const asar=require('@electron/asar'); JSON.parse(asar.extractFile('dist/linux-unpacked/resources/app.asar','package.json').toString()); console.log('app.asar do Linux validado')"
       - uses: actions/upload-artifact@v4
         with:
           name: Biblio-Linux
