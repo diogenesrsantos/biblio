@@ -1,25 +1,38 @@
-const { app, BrowserWindow, dialog } = require('electron');
+const { app, BrowserWindow, dialog, utilityProcess } = require('electron');
 const path = require('node:path');
-const { spawn } = require('node:child_process');
 
 const port = 18080;
 const address = `http://127.0.0.1:${port}`;
 let server;
 let window;
+let serverError = '';
 
 function startServer() {
-  server = spawn(process.execPath, [path.join(__dirname, 'server.js')], {
-    env: { ...process.env, ELECTRON_RUN_AS_NODE: '1', PORT: String(port), DATA_DIR: app.getPath('userData') },
-    stdio: 'ignore'
+  serverError = '';
+  server = utilityProcess.fork(path.join(__dirname, 'server.js'), [], {
+    env: { ...process.env, PORT: String(port), DATA_DIR: app.getPath('userData') },
+    stdio: 'pipe',
+    serviceName: 'Biblio Server'
+  });
+  server.stdout?.on('data', data => console.log(String(data).trimEnd()));
+  server.stderr?.on('data', data => {
+    const message = String(data);
+    serverError = (serverError + message).slice(-4000);
+    console.error(message.trimEnd());
+  });
+  server.on('error', (type, location) => {
+    serverError = `Falha no processo do servidor (${type})${location ? ` em ${location}` : ''}.`;
   });
   server.on('exit', code => {
     if (code === 75 && !app.isQuitting) return startServer();
+    if (!app.isQuitting && !serverError) serverError = `O servidor foi encerrado com o código ${code}.`;
   });
 }
 
 async function waitForServer() {
   for (let attempt = 0; attempt < 80; attempt++) {
     try { if ((await fetch(`${address}/api/health`)).ok) return; } catch {}
+    if (serverError) throw new Error(`A Biblio não conseguiu iniciar o servidor.\n\n${serverError.trim()}`);
     await new Promise(resolve => setTimeout(resolve, 150));
   }
   throw new Error('A Biblio não conseguiu iniciar.');
