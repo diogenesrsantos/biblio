@@ -20,9 +20,9 @@ O público esperado é de uma a três pessoas. A aplicação prioriza simplicida
 
 - Repositório: `https://github.com/diogenesrsantos/biblio`
 - Branch principal: `master`
-- Tag mais recente preparada: `v0.1.3`
-- Commit atual registrado: `c12130b`
-- Versão declarada no `package.json`: `0.1.0`
+- Tag mais recente preparada: `v0.1.7`
+- Commit funcional atual registrado: `6792613`
+- Versão declarada no `package.json`: `0.1.7`
 - Runtime: Node.js 22
 - Banco padrão da versão atual: SQLite
 - Interface: HTML, CSS e JavaScript, instalável como PWA
@@ -212,7 +212,7 @@ Artefatos configurados:
 - Windows x64: instalador NSIS `.exe`, com atalhos;
 - Linux x64: `.AppImage` e pacote `.deb`.
 
-Os dados desktop ficam no diretório de dados do usuário fornecido pelo Electron, separados do programa instalado.
+Os dados desktop ficam na subpasta `data` do diretório de dados do usuário fornecido pelo Electron, separados dos arquivos internos do navegador. No Windows, por exemplo, o banco fica em `%APPDATA%\biblio-pessoal\data\biblio.db`. Essa separação permite renomear os dados durante a restauração sem conflito com arquivos mantidos abertos pelo Electron.
 
 ### Validações realizadas
 
@@ -221,7 +221,11 @@ Os dados desktop ficam no diretório de dados do usuário fornecido pelo Electro
 - SQLite validado dentro do `app.asar` usando a ABI do Electron;
 - workflow `v0.1.2`: Windows e Linux concluídos com sucesso;
 - workflow `v0.1.3`: Windows e Linux concluídos com sucesso;
-- download do artifact Windows confirmado pelo usuário.
+- workflows `v0.1.4` a `v0.1.7`: Windows e Linux concluídos com sucesso;
+- validação automática da integridade do `package.json` dentro do ASAR;
+- instalação e inicialização confirmadas em máquinas Windows e Linux;
+- backup e restauração confirmados nos dois sistemas;
+- restauração das imagens anexadas confirmada pelo usuário.
 
 ### Estado da publicação
 
@@ -239,6 +243,10 @@ O workflow passou a tentar criar uma página GitHub Release depois dos builds. N
 | `db3b056` / `v0.1.1` | Diagnóstico público de falhas do empacotamento |
 | `4cf3c77` / `v0.1.2` | Desativação da publicação implícita; builds aprovados |
 | `c12130b` / `v0.1.3` | Tentativa de publicar instaladores em GitHub Releases |
+| `e13cdb0` / `v0.1.4` | Inicialização do servidor empacotado com `utilityProcess` |
+| `6f2875a` / `v0.1.5` | Diagnóstico persistente da inicialização desktop |
+| `ab586df` / `v0.1.6` | Correção da corrupção do ASAR por logs gravados durante o build |
+| `6792613` / `v0.1.7` | Separação dos dados para permitir restauração no Windows |
 
 Branches remotas relevantes:
 
@@ -286,15 +294,13 @@ Essa instalação deve permanecer fixada em `df8065e` até existir novamente uma
 ## 17. Pendências conhecidas
 
 1. Corrigir o job `release` para publicar instaladores em uma página permanente do GitHub.
-2. Atualizar a versão do `package.json`, atualmente `0.1.0`, em sincronia com as próximas tags.
-3. Adicionar ícones próprios nos instaladores Electron; atualmente o empacotador pode usar o ícone padrão.
-4. Testar instalação, backup e restauração em máquinas Windows e Linux distintas.
-5. Criar testes automatizados para API, banco, backup e restauração.
-6. Modularizar `server.js`, que ainda concentra muitas responsabilidades.
-7. Definir se a edição PostgreSQL continuará como produto suportado ou apenas legado.
-8. Revisar e consolidar `OPERATIONS.md`, removendo instruções PostgreSQL que possam ser confundidas com a versão SQLite.
-9. Considerar streaming para backups grandes; atualmente o ZIP é montado em memória.
-10. Considerar upload de restauração por streaming; atualmente o ZIP usa Base64 e memória.
+2. Adicionar ícones próprios nos instaladores Electron; atualmente o empacotador pode usar o ícone padrão.
+3. Criar testes automatizados para API, banco, backup e restauração.
+4. Modularizar `server.js`, que ainda concentra muitas responsabilidades.
+5. Definir se a edição PostgreSQL continuará como produto suportado ou apenas legado.
+6. Revisar e consolidar `OPERATIONS.md`, removendo instruções PostgreSQL que possam ser confundidas com a versão SQLite.
+7. Considerar streaming para backups grandes; atualmente o ZIP é montado em memória.
+8. Considerar upload de restauração por streaming; atualmente o ZIP usa Base64 e memória.
 
 ## 18. Regras para evolução segura
 
@@ -310,10 +316,7 @@ Essa instalação deve permanecer fixada em `df8065e` até existir novamente uma
 ## 19. Próxima sequência recomendada
 
 1. Corrigir e validar a publicação em GitHub Releases.
-2. Testar o instalador Windows baixado em uma máquina limpa.
-3. Criar artigo fictício, reiniciar e conferir persistência.
-4. Gerar backup no Windows.
-5. Restaurar esse backup numa instalação Linux limpa.
-6. Implantar a VPS SQLite seguindo o manual próprio.
-7. Criar backup externo da VPS e testar uma restauração completa.
-8. Somente então declarar uma nova versão estável.
+2. Criar testes automatizados para os fluxos já validados manualmente.
+3. Implantar a VPS SQLite seguindo o manual próprio.
+4. Criar backup externo da VPS e testar uma restauração completa.
+5. Somente então declarar uma nova versão estável.
