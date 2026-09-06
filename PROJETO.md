@@ -1,6 +1,6 @@
 # Registro consolidado do projeto Biblio
 
-Atualizado em 2 de setembro de 2026.
+Atualizado em 6 de setembro de 2026.
 
 Este documento concentra o estado técnico, as decisões de arquitetura, os procedimentos de operação e as pendências conhecidas da Biblio. Não devem ser registrados aqui senhas, chaves, cookies, URLs com credenciais ou dados pessoais do acervo.
 
@@ -86,7 +86,7 @@ Tabelas criadas automaticamente na inicialização:
 - `users`: conta e hash de senha;
 - `sessions`: sessões autenticadas com expiração;
 - `themes`: temas do acervo;
-- `articles`: artigos, resumo, conteúdo, idioma, data e tema;
+- `articles`: artigos, cor do título, resumo, conteúdo, idioma, data e tema;
 - `authors`: autores;
 - `article_authors`: relação entre artigos e autores;
 - `tags`: etiquetas;
@@ -94,6 +94,7 @@ Tabelas criadas automaticamente na inicialização:
 - `sources`: fontes e referências;
 - `article_sources`: relação entre artigos e fontes;
 - `attachments`: metadados dos arquivos de mídia.
+- `settings`: personalização persistente do cabeçalho e do banner.
 
 Os temas iniciais são Teologia, Filosofia, Culinária e Pensamentos.
 
@@ -119,6 +120,7 @@ Em VPS, Nginx e HTTPS são obrigatórios para acesso externo. As portas internas
 - Imagem ou vídeo individual: 25 MB.
 - Formatos de imagem: JPEG, PNG, GIF e WebP.
 - Formatos de vídeo: MP4, WebM e QuickTime.
+- Imagens personalizadas do banner e das boas-vindas: até 5 MB cada no frontend.
 - Backup recebido para restauração: até 180 MB compactados.
 - Corpo HTTP aceito pelo servidor: até 250 MB.
 - Nginx recomendado para restauração: `client_max_body_size 260m`.
@@ -134,6 +136,7 @@ Em VPS, Nginx e HTTPS são obrigatórios para acesso externo. As portas internas
 | `POST /api/auth/setup` | Cria a primeira conta |
 | `POST /api/auth/login` | Inicia sessão |
 | `POST /api/auth/logout` | Encerra sessão |
+| `PUT /api/auth/account` | Altera usuário e/ou senha mediante confirmação da senha atual |
 | `GET /api/themes` | Lista temas |
 | `POST /api/themes` | Cria tema |
 | `GET /api/articles` | Pesquisa ou lista artigos |
@@ -146,14 +149,41 @@ Em VPS, Nginx e HTTPS são obrigatórios para acesso externo. As portas internas
 | `GET /api/backup` | Baixa backup ZIP autenticado |
 | `POST /api/restore` | Envia backup para restauração e reinício |
 | `GET /media/:arquivo` | Entrega mídia autenticada |
+| `GET /api/settings` | Lê a personalização do cabeçalho |
+| `PUT /api/settings` | Salva textos do cabeçalho e imagens do banner e das boas-vindas |
 
 ## 9. PWA
 
 A interface possui manifesto, ícone e service worker. Os arquivos estáticos são armazenados em cache para abertura da interface; artigos e mídias continuam dependendo do servidor.
 
-O cache atual é identificado como `biblio-shell-v11`.
+O cache atual é identificado como `biblio-shell-v23`.
 
-## 10. Backup e restauração
+## 10. Interface de leitura e edição
+
+- O cabeçalho possui três áreas, com banner personalizável ocupando a região central. A composição padrão usa o retrato do reverendo Albert em um tema evangélico voltado à juventude cristã.
+- Após a autenticação, uma arte vertical de boas-vindas com o reverendo Albert aparece sobre a interface e é fechada ao clicar na imagem.
+- A tela de personalização permite substituir tanto o banner quanto a arte de boas-vindas e informa as dimensões exigidas.
+- A mesma tela permite atualizar o usuário e a senha; a senha atual é exigida e novas senhas têm no mínimo 12 caracteres.
+- O botão de backup abre uma etapa de destino, com escolha de pasta/arquivo quando o navegador oferece a API correspondente, progresso visual, cancelamento e fechamento. Em navegadores sem essa API, o ZIP usa o download padrão.
+- Título, subtítulo e imagem do banner são salvos no SQLite e incluídos nos backups.
+- A biblioteca lateral esquerda é exibida por padrão e pode ser recolhida para ampliar a leitura.
+- O documento aberto mostra somente título e conteúdo; os demais metadados ficam em uma janela translúcida própria.
+- Edição e criação usam um editor sobreposto à interface, com fundo desfocado e barra de ferramentas fixa.
+- O editor permite aplicar tamanho e cor ao texto, além das opções de formatação anteriores.
+- O editor permite alterar a entrelinha dos parágrafos entre compacta, normal, confortável e ampla.
+- O menu de parágrafo permite alinhar blocos à esquerda, ao centro ou à direita.
+- A cor do título possui controle próprio e é preservada junto ao artigo.
+- Imagens escolhidas no campo de mídias são incorporadas na posição atual do cursor; vídeos permanecem como anexos.
+- Imagens selecionadas no editor podem usar largura de 25%, 50%, 75%, 100% ou o tamanho original; a dimensão é preservada na leitura e na impressão.
+- Imagens já anexadas podem ser incorporadas posteriormente pela ação **Inserir no texto**.
+- A galeria direita é estreita, mostra uma única coluna de imagens usadas no texto e permanece oculta por padrão.
+- O menu flutuante do artigo possui um atalho dedicado, com ícone próprio, para abrir diretamente o carrossel de imagens.
+- A visualização ampliada percorre as imagens do artigo por setas na tela ou pelo teclado.
+- A ação de impressão apresenta primeiro uma pré-visualização limpa do artigo e depois abre a impressão do navegador, permitindo escolher uma impressora ou salvar em PDF.
+- O login permite exibir ou ocultar a senha e oferece seis temas visuais rápidos: Clássico, Oceano, Sépia, Rosé, Lavanda e Ardósia.
+- O tema visual é salvo no navegador e no SQLite, acompanha os backups e também é aplicado antes da autenticação nos acessos seguintes.
+
+## 11. Backup e restauração
 
 O formato de backup é ZIP e contém:
 
@@ -185,7 +215,7 @@ Fora do repositório, em `../biblio_servidor/`:
 
 Esses arquivos incluem os dados locais existentes no momento da criação, mas não incluem `.git` nem `node_modules`.
 
-## 11. Comandos de operação
+## 12. Comandos de operação
 
 ```bash
 npm start
@@ -203,7 +233,7 @@ npm run reset-password
 - `npm run restore`: restaura com o servidor parado.
 - `npm run reset-password`: redefine a senha e encerra sessões antigas.
 
-## 12. Distribuição desktop
+## 13. Distribuição desktop
 
 O Electron empacota interface e servidor sem exigir Node.js ou PostgreSQL no computador do usuário.
 
@@ -226,12 +256,13 @@ Os dados desktop ficam na subpasta `data` do diretório de dados do usuário for
 - instalação e inicialização confirmadas em máquinas Windows e Linux;
 - backup e restauração confirmados nos dois sistemas;
 - restauração das imagens anexadas confirmada pelo usuário.
+- instalação limpa confirmada no Windows 10 Home 22H2, sem atualizações adicionais do sistema.
 
 ### Estado da publicação
 
 O workflow passou a tentar criar uma página GitHub Release depois dos builds. Na execução `v0.1.3`, os jobs `windows` e `linux` concluíram com sucesso, mas o job `release` falhou. Portanto, os instaladores dessa execução estão nos artifacts do GitHub Actions e a publicação em Releases permanece pendente de correção.
 
-## 13. Histórico relevante
+## 14. Histórico relevante
 
 | Referência | Descrição |
 |---|---|
@@ -256,7 +287,7 @@ Branches remotas relevantes:
 - `feat/portable-installers`: implementação portátil inicial;
 - `fix/installer-workflow`: correção inicial da automação.
 
-## 14. Instalação e operação documentadas
+## 15. Instalação e operação documentadas
 
 - `README.md`: apresentação e início rápido;
 - `INSTALL.md`: distribuição desktop e transferência entre computadores;
@@ -264,7 +295,7 @@ Branches remotas relevantes:
 - `VPS-POSTGRESQL-NGINX.md`: instalação da edição PostgreSQL anterior;
 - `OPERATIONS.md`: histórico operacional e implantação PostgreSQL existente.
 
-## 15. VPS SQLite recomendada
+## 16. VPS SQLite recomendada
 
 Estrutura definida:
 
@@ -277,7 +308,7 @@ Estrutura definida:
 
 O serviço roda como usuário `biblio`, grava apenas em `/var/lib/biblio`, atende em loopback e é publicado por Nginx com HTTPS.
 
-## 16. VPS PostgreSQL anterior
+## 17. VPS PostgreSQL anterior
 
 Estrutura histórica:
 
@@ -291,7 +322,7 @@ Nginx                          HTTPS para 127.0.0.1:8080
 
 Essa instalação deve permanecer fixada em `df8065e` até existir novamente uma camada PostgreSQL compatível com a `master`.
 
-## 17. Pendências conhecidas
+## 18. Pendências conhecidas
 
 1. Corrigir o job `release` para publicar instaladores em uma página permanente do GitHub.
 2. Adicionar ícones próprios nos instaladores Electron; atualmente o empacotador pode usar o ícone padrão.
@@ -302,7 +333,7 @@ Essa instalação deve permanecer fixada em `df8065e` até existir novamente uma
 7. Considerar streaming para backups grandes; atualmente o ZIP é montado em memória.
 8. Considerar upload de restauração por streaming; atualmente o ZIP usa Base64 e memória.
 
-## 18. Regras para evolução segura
+## 19. Regras para evolução segura
 
 - Fazer backup antes de migrações, atualizações ou restaurações.
 - Nunca versionar `.env`, banco, mídias, senhas ou tokens.
@@ -313,7 +344,7 @@ Essa instalação deve permanecer fixada em `df8065e` até existir novamente uma
 - Criar tags somente depois de atualizar a versão declarada e validar os builds.
 - Manter os dados fora do diretório do código em instalações de produção.
 
-## 19. Próxima sequência recomendada
+## 20. Próxima sequência recomendada
 
 1. Corrigir e validar a publicação em GitHub Releases.
 2. Criar testes automatizados para os fluxos já validados manualmente.
