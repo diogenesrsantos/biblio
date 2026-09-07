@@ -20,9 +20,9 @@ O público esperado é de uma a três pessoas. A aplicação prioriza simplicida
 
 - Repositório: `https://github.com/diogenesrsantos/biblio`
 - Branch principal: `master`
-- Tag mais recente preparada: `v0.1.7`
+- Tag mais recente preparada: `v0.1.8`
 - Commit funcional atual registrado: `6792613`
-- Versão declarada no `package.json`: `0.1.7`
+- Versão declarada no `package.json`: `0.1.8`
 - Runtime: Node.js 22
 - Banco padrão da versão atual: SQLite
 - Interface: HTML, CSS e JavaScript, instalável como PWA
