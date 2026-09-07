@@ -2,7 +2,7 @@
 
 Este manual instala a versão atual da Biblio em uma VPS Ubuntu 24.04 LTS ou Debian 12, usando SQLite, serviço `systemd`, Nginx e HTTPS.
 
-Essa é a modalidade recomendada para uma biblioteca particular com uma a três pessoas. Ela executa uma única instância da aplicação e não requer PostgreSQL.
+Essa é a modalidade recomendada para uma biblioteca particular com uma a três pessoas. Ela executa uma única instância da aplicação e usa somente o banco SQLite incluído na Biblio.
 
 ## 1. Estrutura da instalação
 
@@ -379,5 +379,5 @@ Verifique especialmente:
 - Execute somente uma instância da Biblio usando esse banco.
 - Não coloque `biblio.db` em NFS ou outro sistema de arquivos de rede.
 - Não use múltiplos contêineres ou réplicas apontando para o mesmo arquivo.
-- Para muitos usuários gravando simultaneamente, prefira a edição PostgreSQL.
+- Esta instalação é destinada a uma biblioteca particular, com poucos usuários e uma única instância do serviço.
 - Monitore espaço em disco, principalmente quando houver vídeos.

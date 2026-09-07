@@ -76,6 +76,15 @@ body.library-hidden .libraryPanel { overflow: hidden; padding-left: 0; padding-r
 .theme { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border: 1px solid transparent; border-radius: 7px; color: var(--ink); background: transparent; text-align: left; font-weight: 640; }
 .theme:hover, .theme.active { border-color: #d3ded6; background: var(--accent-soft); }
 .themeCount { color: var(--muted); font-size: .73rem; font-weight: 600; }
+.themeGroup { display: grid; gap: 2px; }
+.themeRow { display: flex; align-items: center; gap: 3px; }
+.themeRow .theme { flex: 1; }
+.themeLabel { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.themeDisclosure { display: inline-grid; place-items: center; width: 12px; color: var(--muted); font-size: 1rem; }
+.addSubtheme { width: 28px; height: 28px; flex: 0 0 auto; padding: 0; border: 1px solid transparent; border-radius: 6px; color: var(--muted); background: transparent; font-size: 1.1rem; line-height: 1; }
+.addSubtheme:hover, .addSubtheme:focus-visible { border-color: #d3ded6; color: var(--ink); background: var(--accent-soft); }
+.subthemeList { display: grid; gap: 2px; margin: 1px 0 3px 18px; padding-left: 8px; border-left: 1px solid var(--line); }
+.subtheme { font-size: .92rem; font-weight: 550; }
 .resultsHeading { margin-top: 27px; padding-bottom: 7px; border-bottom: 1px solid var(--line); }
 .articleList { display: grid; }
 .article { position: relative; width: 100%; padding: 13px 9px 13px 13px; border-radius: 0; color: var(--ink); background: transparent; text-align: left; border-bottom: 1px solid rgba(217, 219, 210, .72); }

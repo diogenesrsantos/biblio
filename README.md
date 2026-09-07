@@ -10,11 +10,11 @@ A interface separa leitura e edição: o documento aberto exibe apenas título e
 
 Consulte [INSTALL.md](INSTALL.md) para gerar e testar instaladores de Windows e Linux.
 
-Para uma implantação dedicada em VPS, use preferencialmente [VPS-SQLITE-NGINX.md](VPS-SQLITE-NGINX.md). A alternativa [VPS-POSTGRESQL-NGINX.md](VPS-POSTGRESQL-NGINX.md) usa uma edição PostgreSQL específica, diferente da distribuição local SQLite.
+Para uma implantação dedicada em VPS, siga [VPS-SQLITE-NGINX.md](VPS-SQLITE-NGINX.md).
 
 ## Executar localmente
 
-Requer Node.js 22 ou superior. A instalação local não requer PostgreSQL: o banco SQLite e as mídias ficam em `data/`. Consulte [OPERATIONS.md](OPERATIONS.md) para a migração da instalação antiga em PostgreSQL e operação avançada.
+Requer Node.js 22 ou superior. O banco SQLite e as mídias ficam em `data/`. Consulte [OPERATIONS.md](OPERATIONS.md) para a operação avançada.
 
 ```bash
 npm install

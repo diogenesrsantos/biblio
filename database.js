@@ -20,16 +20,19 @@ function createDatabase(file) {
 
   const query = async (sql, values = []) => {
     const preparedSql = sqliteSql(sql);
+    const preparedValues = /\$\d+/.test(sql)
+      ? [...sql.matchAll(/\$(\d+)/g)].map(match => values[Number(match[1]) - 1])
+      : values;
     if (!values.length && preparedSql.trim().replace(/;\s*$/, '').includes(';')) {
       db.exec(preparedSql);
       return { rows: [], rowCount: 0 };
     }
     const statement = db.prepare(preparedSql);
     if (isReturning(sql)) {
-      const rows = statement.all(...values);
+      const rows = statement.all(...preparedValues);
       return { rows, rowCount: rows.length };
     }
-    const result = statement.run(...values);
+    const result = statement.run(...preparedValues);
     return { rows: [], rowCount: result.changes };
   };
 

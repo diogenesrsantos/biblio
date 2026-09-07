@@ -11,7 +11,7 @@ O workflow **Gerar instaladores** do GitHub Actions produz os artefatos nativos 
 - Windows 64 bits: instalador `.exe` (NSIS), com atalhos no Menu Iniciar e na Área de Trabalho.
 - Linux 64 bits: `.AppImage` portátil e pacote `.deb`.
 
-Eles incluem o runtime necessário; quem testa não precisa instalar Node.js nem PostgreSQL. Os dados de cada instalação ficam separados da aplicação no diretório de dados do usuário, para sobreviver a atualizações e desinstalações.
+Eles incluem o runtime necessário; quem testa não precisa instalar Node.js nem um serviço de banco de dados. Os dados de cada instalação ficam separados da aplicação no diretório de dados do usuário, para sobreviver a atualizações e desinstalações.
 
 ## Transferir uma biblioteca
 

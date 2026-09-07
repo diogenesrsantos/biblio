@@ -2,6 +2,7 @@ const $ = selector => document.querySelector(selector);
 let authMode = 'login';
 let themes = [];
 let selectedTheme = null;
+let expandedThemes = new Set();
 let currentArticle = null;
 let editingId = null;
 let editorAttachments = [];
@@ -126,11 +127,27 @@ function closeWelcomePopup() {
 
 async function loadThemes() {
   themes = await api('/api/themes');
-  $('#theme_id').innerHTML = '<option value="">Selecione um tema</option>' + themes.map(theme => `<option value="${theme.id}">${escapeHtml(theme.name)}</option>`).join('');
+  const roots = themes.filter(theme => theme.parent_id === null || theme.parent_id === undefined);
+  const childrenOf = parentId => themes.filter(theme => Number(theme.parent_id) === parentId);
+  $('#theme_id').innerHTML = '<option value="">Selecione um tema</option>' + roots.flatMap(theme => [
+    `<option value="${theme.id}">${escapeHtml(theme.name)}</option>`,
+    ...childrenOf(theme.id).map(child => `<option value="${child.id}">↳ ${escapeHtml(theme.name)} › ${escapeHtml(child.name)}</option>`)
+  ]).join('');
   $('#allCount').textContent = themes.reduce((total, theme) => total + Number(theme.article_count || 0), 0);
   $('#allThemes').classList.toggle('active', selectedTheme === null);
-  $('#themeList').innerHTML = themes.map(theme => `<button class="theme ${selectedTheme === theme.id ? 'active' : ''}" data-theme="${theme.id}" type="button"><span>${escapeHtml(theme.name)}</span><span class="themeCount">${theme.article_count}</span></button>`).join('');
-  document.querySelectorAll('[data-theme]').forEach(button => button.onclick = () => selectTheme(Number(button.dataset.theme)));
+  $('#themeList').innerHTML = roots.map(theme => {
+    const children = childrenOf(theme.id);
+    const expanded = expandedThemes.has(theme.id);
+    const count = Number(theme.article_count || 0) + children.reduce((total, child) => total + Number(child.article_count || 0), 0);
+    const childItems = children.map(child => `<button class="theme subtheme ${selectedTheme === child.id ? 'active' : ''}" data-theme="${child.id}" type="button"><span>${escapeHtml(child.name)}</span><span class="themeCount">${child.article_count}</span></button>`).join('');
+    return `<div class="themeGroup"><div class="themeRow"><button class="theme parentTheme ${selectedTheme === theme.id ? 'active' : ''}" data-theme="${theme.id}" data-parent-theme="true" type="button" aria-expanded="${expanded}"><span class="themeLabel">${children.length ? `<span class="themeDisclosure" aria-hidden="true">${expanded ? '⌄' : '›'}</span>` : ''}${escapeHtml(theme.name)}</span><span class="themeCount">${count}</span></button><button class="addSubtheme" data-add-subtheme="${theme.id}" type="button" title="Adicionar subtema a ${escapeHtml(theme.name)}" aria-label="Adicionar subtema a ${escapeHtml(theme.name)}">＋</button></div>${children.length ? `<div class="subthemeList"${expanded ? '' : ' hidden'}>${childItems}</div>` : ''}</div>`;
+  }).join('');
+  document.querySelectorAll('[data-theme]').forEach(button => button.onclick = () => {
+    const id = Number(button.dataset.theme);
+    if (button.dataset.parentTheme) expandedThemes.has(id) ? expandedThemes.delete(id) : expandedThemes.add(id);
+    selectTheme(id);
+  });
+  document.querySelectorAll('[data-add-subtheme]').forEach(button => button.onclick = () => addSubtheme(Number(button.dataset.addSubtheme)));
 }
 
 function selectTheme(theme) {
@@ -138,6 +155,19 @@ function selectTheme(theme) {
   $('#search').value = '';
   loadThemes();
   renderList();
+}
+
+async function addSubtheme(parentId) {
+  const parent = themes.find(theme => theme.id === parentId);
+  if (!parent) return;
+  const name = prompt(`Nome do subtema de “${parent.name}”:`);
+  if (!name) return;
+  try {
+    await api('/api/themes', { method: 'POST', body: JSON.stringify({ name, parent_id: parentId }) });
+    expandedThemes.add(parentId);
+    await loadThemes();
+    toast('Subtema cadastrado.');
+  } catch (error) { toast(error.message); }
 }
 
 async function renderList() {
@@ -263,7 +293,8 @@ function showArticleInfo() {
     }).join('')}</ul>`
     : 'Nenhuma fonte informada';
   const field = (label, value, wide = false) => `<div class="infoField${wide ? ' wide' : ''}"><dt>${label}</dt><dd>${value}</dd></div>`;
-  $('#articleInfo').innerHTML = `<dl class="articleInfo" style="display:contents">${field('Título', escapeHtml(currentArticle.title), true)}${field('Autores', escapeHtml(authors))}${field('Tema', escapeHtml(currentArticle.theme?.name || 'Sem tema'))}${field('Data do texto', escapeHtml(formatDate(currentArticle.written_date)))}${field('Última edição', escapeHtml(formatDate(currentArticle.updated_at, true)))}${field('Resumo', escapeHtml(currentArticle.summary || 'Sem resumo'), true)}${field('Etiquetas', escapeHtml(tags), true)}${field('Idioma', escapeHtml(currentArticle.language || 'Não informado'))}${field('Criado em', escapeHtml(formatDate(currentArticle.created_at, true)))}${field('Fontes e referências', sources, true)}</dl>`;
+  const articleTheme = currentArticle.theme ? `${currentArticle.theme.parent ? currentArticle.theme.parent.name + ' › ' : ''}${currentArticle.theme.name}` : 'Sem tema';
+  $('#articleInfo').innerHTML = `<dl class="articleInfo" style="display:contents">${field('Título', escapeHtml(currentArticle.title), true)}${field('Autores', escapeHtml(authors))}${field('Tema', escapeHtml(articleTheme))}${field('Data do texto', escapeHtml(formatDate(currentArticle.written_date)))}${field('Última edição', escapeHtml(formatDate(currentArticle.updated_at, true)))}${field('Resumo', escapeHtml(currentArticle.summary || 'Sem resumo'), true)}${field('Etiquetas', escapeHtml(tags), true)}${field('Idioma', escapeHtml(currentArticle.language || 'Não informado'))}${field('Criado em', escapeHtml(formatDate(currentArticle.created_at, true)))}${field('Fontes e referências', sources, true)}</dl>`;
   $('#infoDialog').showModal();
 }
 

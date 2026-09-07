@@ -9,7 +9,7 @@ Este documento concentra o estado técnico, as decisões de arquitetura, os proc
 A Biblio é uma biblioteca particular para registrar e consultar:
 
 - artigos e textos com formatação visual;
-- temas, autores e etiquetas;
+- temas e subtemas, autores e etiquetas;
 - fontes e referências;
 - imagens e vídeos anexados;
 - imagens inseridas dentro do conteúdo dos artigos.
@@ -43,21 +43,9 @@ A distribuição atual usa SQLite e é a modalidade recomendada para:
 
 O banco fica em `DATA_DIR/biblio.db` e os anexos em `DATA_DIR/media/`.
 
-### Edição PostgreSQL
+### Limites de implantação
 
-A edição anterior compatível com PostgreSQL está fixada no commit `df8065e`, branch `fix/reset-password`. Ela é mantida como referência para instalações servidor antigas.
-
-A branch `master` atual não lê `DATABASE_URL` e não deve ser instalada esperando funcionamento com PostgreSQL.
-
-### Quando usar cada banco
-
-| Cenário | Banco recomendado |
-|---|---|
-| Computador pessoal Windows/Linux | SQLite |
-| VPS única para poucas pessoas | SQLite |
-| Vários processos ou réplicas | PostgreSQL |
-| Muitos usuários gravando simultaneamente | PostgreSQL |
-| Banco em armazenamento de rede | PostgreSQL |
+A Biblio usa SQLite em todas as modalidades. Ela deve operar em uma única instância, com o banco em disco local; não é adequada para réplicas simultâneas ou armazenamento de rede.
 
 Não executar múltiplas instâncias da versão SQLite apontando para o mesmo arquivo. Não colocar `biblio.db` em NFS.
 
@@ -75,7 +63,6 @@ Não executar múltiplas instâncias da versão SQLite apontando para o mesmo ar
 | `scripts/backup.js` | Backup pelo terminal |
 | `scripts/restore.js` | Restauração pelo terminal |
 | `scripts/reset-password.js` | Redefinição interativa de senha |
-| `scripts/migrate-sqlite-to-postgres.js` | Migração histórica de SQLite para PostgreSQL |
 | `.github/workflows/build-installers.yml` | Geração de instaladores Windows e Linux |
 | `data/` | Banco e mídias no desenvolvimento local |
 
@@ -85,7 +72,7 @@ Tabelas criadas automaticamente na inicialização:
 
 - `users`: conta e hash de senha;
 - `sessions`: sessões autenticadas com expiração;
-- `themes`: temas do acervo;
+- `themes`: temas do acervo, com subtemas em um nível por meio de `parent_id`;
 - `articles`: artigos, cor do título, resumo, conteúdo, idioma, data e tema;
 - `authors`: autores;
 - `article_authors`: relação entre artigos e autores;
@@ -137,8 +124,8 @@ Em VPS, Nginx e HTTPS são obrigatórios para acesso externo. As portas internas
 | `POST /api/auth/login` | Inicia sessão |
 | `POST /api/auth/logout` | Encerra sessão |
 | `PUT /api/auth/account` | Altera usuário e/ou senha mediante confirmação da senha atual |
-| `GET /api/themes` | Lista temas |
-| `POST /api/themes` | Cria tema |
+| `GET /api/themes` | Lista temas e seus subtemas |
+| `POST /api/themes` | Cria tema ou subtema (`parent_id`) |
 | `GET /api/articles` | Pesquisa ou lista artigos |
 | `GET /api/articles/:id` | Abre artigo |
 | `POST /api/articles` | Cria artigo |
@@ -156,7 +143,7 @@ Em VPS, Nginx e HTTPS são obrigatórios para acesso externo. As portas internas
 
 A interface possui manifesto, ícone e service worker. Os arquivos estáticos são armazenados em cache para abertura da interface; artigos e mídias continuam dependendo do servidor.
 
-O cache atual é identificado como `biblio-shell-v23`.
+O cache atual é identificado como `biblio-shell-v24`.
 
 ## 10. Interface de leitura e edição
 
@@ -167,6 +154,7 @@ O cache atual é identificado como `biblio-shell-v23`.
 - O botão de backup abre uma etapa de destino, com escolha de pasta/arquivo quando o navegador oferece a API correspondente, progresso visual, cancelamento e fechamento. Em navegadores sem essa API, o ZIP usa o download padrão.
 - Título, subtítulo e imagem do banner são salvos no SQLite e incluídos nos backups.
 - A biblioteca lateral esquerda é exibida por padrão e pode ser recolhida para ampliar a leitura.
+- Temas do acervo podem conter subtemas. Um clique no tema principal expande ou recolhe os subtemas; o botão `＋` ao lado dele cria um subtema.
 - O documento aberto mostra somente título e conteúdo; os demais metadados ficam em uma janela translúcida própria.
 - Edição e criação usam um editor sobreposto à interface, com fundo desfocado e barra de ferramentas fixa.
 - O editor permite aplicar tamanho e cor ao texto, além das opções de formatação anteriores.
@@ -235,7 +223,7 @@ npm run reset-password
 
 ## 13. Distribuição desktop
 
-O Electron empacota interface e servidor sem exigir Node.js ou PostgreSQL no computador do usuário.
+O Electron empacota interface e servidor sem exigir Node.js ou um serviço de banco de dados no computador do usuário.
 
 Artefatos configurados:
 
@@ -267,7 +255,6 @@ O workflow passou a tentar criar uma página GitHub Release depois dos builds. N
 | Referência | Descrição |
 |---|---|
 | `89360f5` | Editor visual com imagens inseridas no texto |
-| `df8065e` | Redefinição de senha na edição PostgreSQL |
 | `55f9f96` | Distribuição portátil, SQLite, backup e Electron |
 | `5d50364` | Merge do Pull Request da distribuição portátil |
 | `b49efb3` / `v0.1.0` | Correção inicial do workflow integrada em `master` |
@@ -283,7 +270,6 @@ Branches remotas relevantes:
 
 - `master`: versão atual SQLite;
 - `feature/editor-visual`: base histórica do editor;
-- `fix/reset-password`: edição PostgreSQL com redefinição de senha;
 - `feat/portable-installers`: implementação portátil inicial;
 - `fix/installer-workflow`: correção inicial da automação.
 
@@ -292,8 +278,7 @@ Branches remotas relevantes:
 - `README.md`: apresentação e início rápido;
 - `INSTALL.md`: distribuição desktop e transferência entre computadores;
 - `VPS-SQLITE-NGINX.md`: instalação recomendada em VPS;
-- `VPS-POSTGRESQL-NGINX.md`: instalação da edição PostgreSQL anterior;
-- `OPERATIONS.md`: histórico operacional e implantação PostgreSQL existente.
+- `OPERATIONS.md`: operação local e em VPS.
 
 ## 16. VPS SQLite recomendada
 
@@ -308,43 +293,25 @@ Estrutura definida:
 
 O serviço roda como usuário `biblio`, grava apenas em `/var/lib/biblio`, atende em loopback e é publicado por Nginx com HTTPS.
 
-## 17. VPS PostgreSQL anterior
-
-Estrutura histórica:
-
-```text
-/var/www/biblio                código e mídias
-/etc/biblio/biblio.env         DATABASE_URL e configuração
-biblio.service                 serviço systemd
-PostgreSQL local               banco biblio, papel biblio_app
-Nginx                          HTTPS para 127.0.0.1:8080
-```
-
-Essa instalação deve permanecer fixada em `df8065e` até existir novamente uma camada PostgreSQL compatível com a `master`.
-
-## 18. Pendências conhecidas
+## 17. Pendências conhecidas
 
 1. Corrigir o job `release` para publicar instaladores em uma página permanente do GitHub.
 2. Adicionar ícones próprios nos instaladores Electron; atualmente o empacotador pode usar o ícone padrão.
 3. Criar testes automatizados para API, banco, backup e restauração.
 4. Modularizar `server.js`, que ainda concentra muitas responsabilidades.
-5. Definir se a edição PostgreSQL continuará como produto suportado ou apenas legado.
-6. Revisar e consolidar `OPERATIONS.md`, removendo instruções PostgreSQL que possam ser confundidas com a versão SQLite.
-7. Considerar streaming para backups grandes; atualmente o ZIP é montado em memória.
-8. Considerar upload de restauração por streaming; atualmente o ZIP usa Base64 e memória.
+5. Considerar streaming para backups grandes; atualmente o ZIP é montado em memória.
+6. Considerar upload de restauração por streaming; atualmente o ZIP usa Base64 e memória.
 
-## 19. Regras para evolução segura
+## 18. Regras para evolução segura
 
 - Fazer backup antes de migrações, atualizações ou restaurações.
 - Nunca versionar `.env`, banco, mídias, senhas ou tokens.
 - Não apagar pastas `antes-da-restauracao` até validar a cópia restaurada.
-- Não implantar `master` sobre uma VPS PostgreSQL sem um plano explícito de migração.
-- Não executar a migração SQLite para PostgreSQL durante uma atualização normal.
 - Testar instaladores em ambiente limpo antes de recomendá-los como versão estável.
 - Criar tags somente depois de atualizar a versão declarada e validar os builds.
 - Manter os dados fora do diretório do código em instalações de produção.
 
-## 20. Próxima sequência recomendada
+## 19. Próxima sequência recomendada
 
 1. Corrigir e validar a publicação em GitHub Releases.
 2. Criar testes automatizados para os fluxos já validados manualmente.
