@@ -20,8 +20,8 @@ O público esperado é de uma a três pessoas. A aplicação prioriza simplicida
 
 - Repositório: `https://github.com/diogenesrsantos/biblio`
 - Branch principal: `master`
-- Próxima tag de release: `v0.1.9`
-- Commit funcional atual: alterações locais validadas para a `v0.1.9`
+- Tag mais recente preparada: `v0.1.9`
+- Commit funcional atual: `f0abf1d`, com recurso de tabelas em desenvolvimento local
 - Versão declarada no `package.json`: `0.1.9`
 - Runtime: Node.js 22
 - Banco padrão da versão atual: SQLite
@@ -143,7 +143,7 @@ Em VPS, Nginx e HTTPS são obrigatórios para acesso externo. As portas internas
 
 A interface possui manifesto, ícone e service worker. Os arquivos estáticos são armazenados em cache para abertura da interface; artigos e mídias continuam dependendo do servidor.
 
-O cache atual é identificado como `biblio-shell-v29`.
+O cache atual é identificado como `biblio-shell-v35`.
 
 ## 10. Interface de leitura e edição
 
@@ -159,7 +159,10 @@ O cache atual é identificado como `biblio-shell-v29`.
 - Edição e criação usam um editor sobreposto à interface, com fundo desfocado e barra de ferramentas fixa.
 - O editor permite aplicar tamanho e cor ao texto, além das opções de formatação anteriores.
 - O editor permite alterar a entrelinha dos parágrafos entre compacta, normal, confortável e ampla.
-- O menu de parágrafo permite alinhar blocos à esquerda, ao centro ou à direita.
+- Um ou mais parágrafos podem ser organizados em duas ou três colunas, voltando a uma coluna quando desejado; em telas estreitas o texto volta automaticamente a uma coluna.
+- O editor permite inserir tabelas com cabeçalho, escolher linhas e colunas e acrescentar ou remover linhas e colunas enquanto edita.
+- As tabelas são preservadas de forma segura, adaptam-se a telas estreitas e são incluídas na pré-visualização e impressão.
+- O menu de parágrafo permite alinhar blocos à esquerda, ao centro, à direita ou de modo justificado.
 - A cor do título possui controle próprio e é preservada junto ao artigo.
 - Imagens escolhidas no campo de mídias são incorporadas na posição atual do cursor; vídeos permanecem como anexos.
 - Imagens selecionadas no editor podem usar largura de 25%, 50%, 75%, 100% ou o tamanho original; a dimensão é preservada na leitura e na impressão.

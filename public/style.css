@@ -136,6 +136,14 @@ body.library-hidden .libraryPanel { overflow: hidden; padding-left: 0; padding-r
 .readerContent::after { display: block; clear: both; content: ""; }
 .readerContent figcaption { margin-top: .65rem; color: var(--muted); font: italic .8rem/1.4 system-ui, sans-serif; }
 .readerContent pre { overflow: auto; padding: 16px; border-radius: 8px; background: #eef0eb; font: .88rem/1.55 ui-monospace, monospace; }
+.readerContent .text-columns-2, .richContent .text-columns-2 { column-count: 2; }
+.readerContent .text-columns-3, .richContent .text-columns-3 { column-count: 3; }
+.readerContent .text-columns-2, .readerContent .text-columns-3, .richContent .text-columns-2, .richContent .text-columns-3 { column-gap: 2.2em; column-rule: 1px solid var(--line); margin: 1.35em 0; }
+.readerContent .text-columns-2 > *, .readerContent .text-columns-3 > *, .richContent .text-columns-2 > *, .richContent .text-columns-3 > * { break-inside: avoid-column; }
+.readerContent table, .richContent table { width: 100%; margin: 1.7em 0; border-collapse: collapse; table-layout: fixed; font: .92em/1.45 system-ui, sans-serif; }
+.readerContent th, .readerContent td, .richContent th, .richContent td { min-width: 5.5em; padding: .62em .72em; border: 1px solid var(--line); overflow-wrap: anywhere; text-align: left; vertical-align: top; }
+.readerContent th, .richContent th { color: var(--ink); background: var(--accent-soft); font-weight: 750; }
+.readerContent tr:nth-child(even) td { background: color-mix(in srgb, var(--paper) 52%, transparent); }
 
 .mediaPanel { overflow: hidden auto; padding: 22px 12px; border-left: 0 solid var(--line); opacity: 0; pointer-events: none; transition: opacity .2s ease, padding .25s ease; }
 body.media-open .mediaPanel { border-left-width: 1px; opacity: 1; pointer-events: auto; }
@@ -210,6 +218,7 @@ label input, label textarea, label select { display: block; margin-top: 5px; fon
 .editorToolbar button:hover { border-color: #b8c8bb; background: var(--accent-soft); }
 .editorToolbar button.danger { color: var(--danger); border-color: #e4c5c0; }
 .editorToolbar button.danger:hover { background: #fff0ed; }
+.tableActions { display: inline-flex; flex-wrap: wrap; gap: 4px; padding-left: 5px; border-left: 1px solid var(--line); }
 .themeHomeControl { align-content: center; min-height: 58px; padding: .65rem .75rem; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: var(--accent-soft); font-size: .8rem; font-weight: 650; }
 .themeHomeControl input { display: inline; width: auto; margin: 0 .45rem 0 0; vertical-align: middle; }
 .toolbarDivider { width: 1px; height: 24px; margin: 0 3px; background: var(--line); }
@@ -220,6 +229,7 @@ label input, label textarea, label select { display: block; margin-top: 5px; fon
 .alignmentIcon i:nth-child(2) { width: 11px; }
 .alignmentIcon.center { justify-items: center; }
 .alignmentIcon.right { justify-items: end; }
+.alignmentIcon.justified i:nth-child(2) { width: 16px; }
 .toolbarPopover { position: absolute; z-index: 20; top: calc(100% + 7px); left: 0; min-width: 155px; display: grid; gap: 3px; padding: 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); box-shadow: 0 12px 35px rgba(31, 43, 35, .18); }
 .editorToolbar .toolbarPopover button { width: 100%; display: flex; align-items: center; gap: 9px; border-color: transparent; text-align: left; }
 .colorControl { width: auto; display: flex; align-items: center; gap: 6px; padding: 3px 7px; border: 1px solid var(--line); border-radius: 5px; background: #fff; font-size: .76rem; }
@@ -249,6 +259,7 @@ label input, label textarea, label select { display: block; margin-top: 5px; fon
 .richContent::after { display: block; clear: both; content: ""; }
 .richContent figcaption { margin-top: .45rem; color: var(--muted); font: italic .8rem/1.4 system-ui, sans-serif; }
 .richContent blockquote { margin: 1.2em 0; padding: .25em 1em; border-left: 4px solid var(--accent); color: var(--muted); font-style: italic; }
+.richContent td.selectedEditorTableCell, .richContent th.selectedEditorTableCell { outline: 3px solid var(--accent); outline-offset: -3px; }
 .supportGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 fieldset { min-width: 0; margin: 26px 0 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 8px; }
 legend { padding: 0 5px; font-weight: 750; }
@@ -334,6 +345,9 @@ legend { padding: 0 5px; font-weight: 750; }
   .editorCanvas { padding: 23px 14px 50px; }
   .titleColorControl span { display: none; }
   .richContent { min-height: 390px; padding: 22px 18px; }
+  .readerContent .text-columns-2, .readerContent .text-columns-3, .richContent .text-columns-2, .richContent .text-columns-3 { column-count: 1; column-rule: 0; }
+  .readerContent table, .richContent table { table-layout: auto; font-size: .86em; }
+  .readerContent th, .readerContent td, .richContent th, .richContent td { min-width: 4.5em; padding: .5em; }
   .readerContent figure.image-wrap-left, .readerContent figure.image-wrap-right, .richContent figure.image-wrap-left, .richContent figure.image-wrap-right { float: none; width: auto; margin-right: auto; margin-left: auto; }
   .welcomeArtwork { width: min(88vw, calc(78vh * .6667)); height: 78vh; min-width: 0; }
   .imageModal { padding: 60px 12px 20px; }
@@ -353,7 +367,10 @@ legend { padding: 0 5px; font-weight: 750; }
   .printDocument .readerContent { color: #111; font: 12pt/1.6 Georgia, serif; }
   .printDocument .readerContent p, .printDocument .readerContent li { orphans: 3; widows: 3; }
   .printDocument .readerContent h2, .printDocument .readerContent h3 { break-after: avoid-page; }
-  .printDocument .readerContent figure, .printDocument .readerContent img, .printDocument .readerContent blockquote, .printDocument .readerContent pre { break-inside: avoid-page; }
+  .printDocument .readerContent figure, .printDocument .readerContent img, .printDocument .readerContent blockquote, .printDocument .readerContent pre, .printDocument .readerContent table { break-inside: avoid-page; }
+  .printDocument .readerContent th, .printDocument .readerContent td { padding: 2.5mm; border-color: #999; }
+  .printDocument .readerContent .text-columns-2 { column-count: 2; }
+  .printDocument .readerContent .text-columns-3 { column-count: 3; }
   .printDocument .readerContent img { max-height: 220mm; }
   .printDocument, .printDocument * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 }

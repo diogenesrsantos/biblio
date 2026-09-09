@@ -8,6 +8,7 @@ let themeNavigation = [];
 let editingId = null;
 let editorAttachments = [];
 let savedRange = null;
+let selectedEditorTableCell = null;
 let bannerSettings = {};
 let imageGallery = [];
 let imageIndex = -1;
@@ -343,6 +344,7 @@ function sourceValues() {
 
 function fillEditor(article) {
   selectEditorImage(null);
+  selectEditorTableCell(null);
   editingId = article.id;
   editorAttachments = article.attachments || [];
   $('#status').textContent = 'EDITANDO ARTIGO';
@@ -369,6 +371,7 @@ function editCurrentArticle() {
 
 function fresh(options = {}) {
   selectEditorImage(null);
+  selectEditorTableCell(null);
   editingId = null;
   editorAttachments = [];
   savedRange = null;
@@ -401,6 +404,7 @@ function articlePayload() {
   const payload = Object.fromEntries(new FormData($('#articleForm')));
   const content = $('#content').cloneNode(true);
   content.querySelectorAll('.selectedEditorImage').forEach(image => image.classList.remove('selectedEditorImage'));
+  content.querySelectorAll('.selectedEditorTableCell').forEach(cell => cell.classList.remove('selectedEditorTableCell'));
   payload.content = content.innerHTML;
   payload.sources = sourceValues();
   return payload;
@@ -471,6 +475,46 @@ function runCommand(command, value = null) {
   $('#content').focus();
 }
 
+function justifySelection() {
+  restoreSelection();
+  const content = $('#content');
+  const selection = window.getSelection();
+  if (!selection.rangeCount) return;
+  const range = selection.getRangeAt(0);
+  const nearestBlock = node => {
+    const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
+    const block = element?.closest('p,div,h2,h3,blockquote,li');
+    return block && content.contains(block) ? block : null;
+  };
+  const start = nearestBlock(range.startContainer);
+  const end = nearestBlock(range.endContainer);
+  let blocks = [];
+  if (start && end && start.parentElement === end.parentElement) {
+    const siblings = [...start.parentElement.children];
+    const first = siblings.indexOf(start);
+    const last = siblings.indexOf(end);
+    blocks = siblings.slice(Math.min(first, last), Math.max(first, last) + 1)
+      .filter(element => element.matches('p,div,h2,h3,blockquote,li'));
+  }
+  if (!blocks.length && !range.collapsed) {
+    const block = document.createElement('div');
+    block.style.textAlign = 'justify';
+    block.append(range.extractContents());
+    range.insertNode(block);
+    const nextRange = document.createRange();
+    nextRange.selectNodeContents(block);
+    selection.removeAllRanges();
+    selection.addRange(nextRange);
+    rememberSelection();
+    content.focus();
+    return;
+  }
+  if (!blocks.length) return toast('Selecione um parágrafo ou texto para justificar.');
+  blocks.forEach(block => { block.style.textAlign = 'justify'; });
+  rememberSelection();
+  content.focus();
+}
+
 function setLineSpacing(value) {
   const content = $('#content');
   restoreSelection();
@@ -506,6 +550,200 @@ function setLineSpacing(value) {
   blocks.forEach(element => { element.style.lineHeight = value; });
   rememberSelection();
   $('#content').focus();
+}
+
+function columnContainer() {
+  const selection = window.getSelection();
+  if (!selection.rangeCount) return null;
+  const node = selection.getRangeAt(0).commonAncestorContainer;
+  const element = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+  const container = element?.closest('div.text-columns-2,div.text-columns-3');
+  return container && $('#content').contains(container) ? container : null;
+}
+
+function setTextColumns(value) {
+  restoreSelection();
+  const content = $('#content');
+  const selection = window.getSelection();
+  if (!selection.rangeCount) return;
+  const range = selection.getRangeAt(0);
+  const existing = columnContainer();
+  if (value === '1') {
+    if (!existing) return toast('Coloque o cursor dentro de um texto em colunas para voltar a uma coluna.');
+    const first = existing.firstElementChild;
+    existing.replaceWith(...existing.childNodes);
+    if (first) {
+      const nextRange = document.createRange();
+      nextRange.selectNodeContents(first);
+      nextRange.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(nextRange);
+      rememberSelection();
+    }
+    content.focus();
+    return toast('Texto reorganizado em uma coluna.');
+  }
+  if (!['2', '3'].includes(value)) return;
+  if (existing) {
+    existing.className = `text-columns-${value}`;
+    content.focus();
+    return toast(`Texto reorganizado em ${value} colunas.`);
+  }
+  const anchor = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE ? range.commonAncestorContainer : range.commonAncestorContainer.parentElement;
+  if (anchor?.closest('table')) return toast('O texto dentro de uma tabela não pode ser organizado em colunas.');
+  const nearestBlock = node => {
+    const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
+    const block = element?.closest('p,div,h2,h3,blockquote,ul,ol');
+    return block && content.contains(block) ? block : null;
+  };
+  const start = nearestBlock(range.startContainer);
+  const end = nearestBlock(range.endContainer);
+  let blocks = [];
+  if (start && end && start.parentElement === end.parentElement) {
+    const siblings = [...start.parentElement.children];
+    const startIndex = siblings.indexOf(start);
+    const endIndex = siblings.indexOf(end);
+    blocks = siblings.slice(Math.min(startIndex, endIndex), Math.max(startIndex, endIndex) + 1)
+      .filter(element => element.matches('p,div,h2,h3,blockquote,ul,ol'));
+  } else if (start && start === end) blocks = [start];
+  if (!blocks.length && !range.collapsed) {
+    const wrapper = document.createElement('div');
+    wrapper.className = `text-columns-${value}`;
+    const paragraph = document.createElement('p');
+    paragraph.append(range.extractContents());
+    wrapper.append(paragraph);
+    range.insertNode(wrapper);
+    const nextRange = document.createRange();
+    nextRange.selectNodeContents(paragraph);
+    nextRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(nextRange);
+    rememberSelection();
+    content.focus();
+    return toast(`Texto selecionado organizado em ${value} colunas.`);
+  }
+  if (!blocks.length) return toast('Selecione o texto ou um parágrafo para organizar em colunas.');
+  const wrapper = document.createElement('div');
+  wrapper.className = `text-columns-${value}`;
+  blocks[0].before(wrapper);
+  blocks.forEach(block => wrapper.append(block));
+  const nextRange = document.createRange();
+  nextRange.selectNodeContents(wrapper);
+  nextRange.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(nextRange);
+  rememberSelection();
+  content.focus();
+  toast(`Texto organizado em ${value} colunas.`);
+}
+
+function tableCell() {
+  const selection = window.getSelection();
+  if (!selection.rangeCount) return null;
+  const node = selection.getRangeAt(0).commonAncestorContainer;
+  const element = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+  const cell = element?.closest('th,td');
+  return cell && $('#content').contains(cell) ? cell : null;
+}
+
+function selectEditorTableCell(cell = null) {
+  selectedEditorTableCell?.classList.remove('selectedEditorTableCell');
+  selectedEditorTableCell = cell && $('#content').contains(cell) ? cell : null;
+  selectedEditorTableCell?.classList.add('selectedEditorTableCell');
+  $('#tableActions').hidden = !selectedEditorTableCell;
+}
+
+function placeTableCaret(cell) {
+  const range = document.createRange();
+  range.selectNodeContents(cell);
+  range.collapse(true);
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(range);
+  rememberSelection();
+  selectEditorTableCell(cell);
+  $('#content').focus();
+}
+
+function blankTableCell(tagName) {
+  const cell = document.createElement(tagName);
+  cell.append(document.createElement('br'));
+  return cell;
+}
+
+function insertTable() {
+  const rows = Number(prompt('Quantidade de linhas de conteúdo (1 a 20):', '3'));
+  if (!Number.isInteger(rows) || rows < 1 || rows > 20) return toast('Informe de 1 a 20 linhas.');
+  const columns = Number(prompt('Quantidade de colunas (1 a 10):', '3'));
+  if (!Number.isInteger(columns) || columns < 1 || columns > 10) return toast('Informe de 1 a 10 colunas.');
+  restoreSelection();
+  const range = window.getSelection().getRangeAt(0);
+  range.deleteContents();
+  const table = document.createElement('table');
+  const head = table.createTHead();
+  const headerRow = head.insertRow();
+  for (let column = 0; column < columns; column++) headerRow.append(blankTableCell('th'));
+  const body = table.createTBody();
+  for (let row = 0; row < rows; row++) {
+    const tableRow = body.insertRow();
+    for (let column = 0; column < columns; column++) tableRow.append(blankTableCell('td'));
+  }
+  const following = document.createElement('p');
+  following.append(document.createElement('br'));
+  const fragment = document.createDocumentFragment();
+  fragment.append(table, following);
+  range.insertNode(fragment);
+  placeTableCaret(headerRow.cells[0]);
+  toast('Tabela inserida. Clique em uma célula para ajustar linhas e colunas.');
+}
+
+function currentEditorTable() {
+  return selectedEditorTableCell?.closest('table') || null;
+}
+
+function addTableRow() {
+  const table = currentEditorTable();
+  if (!table) return;
+  const columns = table.rows[0]?.cells.length || 1;
+  const body = table.tBodies[0] || table.createTBody();
+  const row = body.insertRow();
+  for (let column = 0; column < columns; column++) row.append(blankTableCell('td'));
+  placeTableCaret(row.cells[0]);
+}
+
+function removeTableRow() {
+  const table = currentEditorTable();
+  const row = selectedEditorTableCell?.closest('tr');
+  if (!table || !row) return;
+  row.remove();
+  const nextCell = table.querySelector('td,th');
+  if (nextCell) placeTableCaret(nextCell);
+  else { table.remove(); selectEditorTableCell(null); $('#content').focus(); }
+}
+
+function addTableColumn() {
+  const table = currentEditorTable();
+  if (!table) return;
+  for (const row of table.rows) row.append(blankTableCell(row.parentElement.tagName === 'THEAD' ? 'th' : 'td'));
+  placeTableCaret(table.rows[0].cells[table.rows[0].cells.length - 1]);
+}
+
+function removeTableColumn() {
+  const table = currentEditorTable();
+  if (!table) return;
+  const index = [...selectedEditorTableCell.parentElement.cells].indexOf(selectedEditorTableCell);
+  for (const row of table.rows) row.cells[index]?.remove();
+  if (!table.rows[0]?.cells.length) { table.remove(); selectEditorTableCell(null); $('#content').focus(); return; }
+  placeTableCaret(table.rows[0].cells[Math.min(index, table.rows[0].cells.length - 1)]);
+}
+
+function removeTable() {
+  const table = currentEditorTable();
+  if (!table || !confirm('Remover esta tabela do texto?')) return;
+  table.remove();
+  selectEditorTableCell(null);
+  $('#content').focus();
+  toast('Tabela removida. Salve o artigo para confirmar.');
 }
 
 function selectEditorImage(image) {
@@ -574,19 +812,27 @@ function setupRichEditor() {
     $('#alignmentButton').setAttribute('aria-expanded', String(opening));
   };
   document.querySelectorAll('[data-align]').forEach(button => button.onclick = () => {
-    runCommand(button.dataset.align);
+    if (button.dataset.align === 'justifyFull') justifySelection();
+    else runCommand(button.dataset.align);
     $('#alignmentMenu').hidden = true;
     $('#alignmentButton').setAttribute('aria-expanded', 'false');
   });
   $('#blockFormat').onchange = event => { runCommand('formatBlock', event.target.value); event.target.value = 'p'; };
   $('#fontSize').onchange = event => { if (event.target.value) runCommand('fontSize', event.target.value); event.target.value = ''; };
   $('#lineSpacing').onchange = event => { if (event.target.value) setLineSpacing(event.target.value); event.target.value = ''; };
+  $('#textColumns').onchange = event => { if (event.target.value) setTextColumns(event.target.value); event.target.value = ''; };
   $('#imageSize').onchange = event => setEditorImageSize(event.target.value);
   $('#imageWrap').onchange = event => setEditorImageWrap(event.target.value);
   $('#removeEditorImage').onclick = removeEditorImage;
   $('#fontColor').oninput = event => runCommand('foreColor', event.target.value);
   $('#insertLink').onclick = () => { const href = prompt('Endereço do link:'); if (href) runCommand('createLink', href.trim()); };
   $('#insertImage').onclick = () => { rememberSelection(); $('#inlineImageInput').click(); };
+  $('#insertTable').onclick = insertTable;
+  $('#addTableRow').onclick = addTableRow;
+  $('#removeTableRow').onclick = removeTableRow;
+  $('#addTableColumn').onclick = addTableColumn;
+  $('#removeTableColumn').onclick = removeTableColumn;
+  $('#removeTable').onclick = removeTable;
   $('#inlineImageInput').onchange = async event => { const file = event.target.files[0]; event.target.value = ''; if (file) await insertInlineImage(file); };
   $('#files').onchange = async event => {
     const files = [...event.target.files];
@@ -597,10 +843,10 @@ function setupRichEditor() {
       toast(files.some(file => file.type.startsWith('image/')) ? 'Imagem inserida no texto.' : 'Vídeo anexado ao artigo.');
     } catch (error) { toast(error.message); }
   };
-  $('#content').addEventListener('keyup', rememberSelection);
-  $('#content').addEventListener('mouseup', rememberSelection);
-  $('#content').addEventListener('focus', rememberSelection);
-  $('#content').addEventListener('click', event => selectEditorImage(event.target.closest('img')));
+  $('#content').addEventListener('keyup', () => { rememberSelection(); selectEditorTableCell(tableCell()); });
+  $('#content').addEventListener('mouseup', () => { rememberSelection(); selectEditorTableCell(tableCell()); });
+  $('#content').addEventListener('focus', () => { rememberSelection(); selectEditorTableCell(tableCell()); });
+  $('#content').addEventListener('click', event => { selectEditorImage(event.target.closest('img')); selectEditorTableCell(event.target.closest('th,td')); });
   $('#content').addEventListener('paste', event => {
     const image = [...event.clipboardData.items].find(item => item.kind === 'file' && item.type.startsWith('image/'))?.getAsFile();
     if (!image) return;
