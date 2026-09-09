@@ -1,6 +1,6 @@
 # Registro consolidado do projeto Biblio
 
-Atualizado em 6 de setembro de 2026.
+Atualizado em 9 de setembro de 2026.
 
 Este documento concentra o estado técnico, as decisões de arquitetura, os procedimentos de operação e as pendências conhecidas da Biblio. Não devem ser registrados aqui senhas, chaves, cookies, URLs com credenciais ou dados pessoais do acervo.
 
@@ -20,9 +20,9 @@ O público esperado é de uma a três pessoas. A aplicação prioriza simplicida
 
 - Repositório: `https://github.com/diogenesrsantos/biblio`
 - Branch principal: `master`
-- Tag mais recente preparada: `v0.1.8`
-- Commit funcional atual registrado: `6792613`
-- Versão declarada no `package.json`: `0.1.8`
+- Próxima tag de release: `v0.1.9`
+- Commit funcional atual: alterações locais validadas para a `v0.1.9`
+- Versão declarada no `package.json`: `0.1.9`
 - Runtime: Node.js 22
 - Banco padrão da versão atual: SQLite
 - Interface: HTML, CSS e JavaScript, instalável como PWA
@@ -143,7 +143,7 @@ Em VPS, Nginx e HTTPS são obrigatórios para acesso externo. As portas internas
 
 A interface possui manifesto, ícone e service worker. Os arquivos estáticos são armazenados em cache para abertura da interface; artigos e mídias continuam dependendo do servidor.
 
-O cache atual é identificado como `biblio-shell-v24`.
+O cache atual é identificado como `biblio-shell-v29`.
 
 ## 10. Interface de leitura e edição
 
@@ -163,6 +163,10 @@ O cache atual é identificado como `biblio-shell-v24`.
 - A cor do título possui controle próprio e é preservada junto ao artigo.
 - Imagens escolhidas no campo de mídias são incorporadas na posição atual do cursor; vídeos permanecem como anexos.
 - Imagens selecionadas no editor podem usar largura de 25%, 50%, 75%, 100% ou o tamanho original; a dimensão é preservada na leitura e na impressão.
+- Uma imagem selecionada no editor pode ficar em linha própria ou à esquerda/direita, com o texto contornando-a; em telas estreitas ela volta a ocupar sua própria linha.
+- A imagem selecionada pode ser removida do texto pelo editor; a exclusão definitiva do arquivo continua disponível no painel de mídias.
+- Cada tema principal pode ter, opcionalmente, um único **artigo de apresentação**. Ele é criado ou editado pelo botão de casa no tema, abre primeiro na seleção daquele tema e identifica o assunto do acervo.
+- Durante a leitura de um tema, uma barra flutuante à esquerda permite ir ao primeiro artigo (Home), anterior, próximo ou último artigo daquele tema.
 - Imagens já anexadas podem ser incorporadas posteriormente pela ação **Inserir no texto**.
 - A galeria direita é estreita, mostra uma única coluna de imagens usadas no texto e permanece oculta por padrão.
 - O menu flutuante do artigo possui um atalho dedicado, com ícone próprio, para abrir diretamente o carrossel de imagens.
@@ -248,7 +252,7 @@ Os dados desktop ficam na subpasta `data` do diretório de dados do usuário for
 
 ### Estado da publicação
 
-O workflow passou a tentar criar uma página GitHub Release depois dos builds. Na execução `v0.1.3`, os jobs `windows` e `linux` concluíram com sucesso, mas o job `release` falhou. Portanto, os instaladores dessa execução estão nos artifacts do GitHub Actions e a publicação em Releases permanece pendente de correção.
+O workflow gera os instaladores Windows e Linux, publica-os como artifacts e, em tags `v*`, tenta criar a GitHub Release com esses arquivos. A configuração atual usa `gh release create` com o token do GitHub Actions. A publicação deve ser conferida na próxima tag antes de ser considerada estável.
 
 ## 14. Histórico relevante
 
@@ -265,6 +269,8 @@ O workflow passou a tentar criar uma página GitHub Release depois dos builds. N
 | `6f2875a` / `v0.1.5` | Diagnóstico persistente da inicialização desktop |
 | `ab586df` / `v0.1.6` | Correção da corrupção do ASAR por logs gravados durante o build |
 | `6792613` / `v0.1.7` | Separação dos dados para permitir restauração no Windows |
+| `98434b2` / `v0.1.8` | Preparação da versão SQLite com subtemas |
+| `v0.1.9` | Artigos de apresentação por tema, navegação entre artigos e aperfeiçoamentos no editor de imagens |
 
 Branches remotas relevantes:
 
@@ -313,7 +319,7 @@ O serviço roda como usuário `biblio`, grava apenas em `/var/lib/biblio`, atend
 
 ## 19. Próxima sequência recomendada
 
-1. Corrigir e validar a publicação em GitHub Releases.
+1. Validar a publicação da próxima tag em GitHub Releases.
 2. Criar testes automatizados para os fluxos já validados manualmente.
 3. Implantar a VPS SQLite seguindo o manual próprio.
 4. Criar backup externo da VPS e testar uma restauração completa.

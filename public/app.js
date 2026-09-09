@@ -4,6 +4,7 @@ let themes = [];
 let selectedTheme = null;
 let expandedThemes = new Set();
 let currentArticle = null;
+let themeNavigation = [];
 let editingId = null;
 let editorAttachments = [];
 let savedRange = null;
@@ -140,7 +141,8 @@ async function loadThemes() {
     const expanded = expandedThemes.has(theme.id);
     const count = Number(theme.article_count || 0) + children.reduce((total, child) => total + Number(child.article_count || 0), 0);
     const childItems = children.map(child => `<button class="theme subtheme ${selectedTheme === child.id ? 'active' : ''}" data-theme="${child.id}" type="button"><span>${escapeHtml(child.name)}</span><span class="themeCount">${child.article_count}</span></button>`).join('');
-    return `<div class="themeGroup"><div class="themeRow"><button class="theme parentTheme ${selectedTheme === theme.id ? 'active' : ''}" data-theme="${theme.id}" data-parent-theme="true" type="button" aria-expanded="${expanded}"><span class="themeLabel">${children.length ? `<span class="themeDisclosure" aria-hidden="true">${expanded ? '⌄' : '›'}</span>` : ''}${escapeHtml(theme.name)}</span><span class="themeCount">${count}</span></button><button class="addSubtheme" data-add-subtheme="${theme.id}" type="button" title="Adicionar subtema a ${escapeHtml(theme.name)}" aria-label="Adicionar subtema a ${escapeHtml(theme.name)}">＋</button></div>${children.length ? `<div class="subthemeList"${expanded ? '' : ' hidden'}>${childItems}</div>` : ''}</div>`;
+    const homeAction = theme.home_article_id ? 'Editar artigo de apresentação' : 'Criar artigo de apresentação';
+    return `<div class="themeGroup"><div class="themeRow"><button class="theme parentTheme ${selectedTheme === theme.id ? 'active' : ''}" data-theme="${theme.id}" data-parent-theme="true" type="button" aria-expanded="${expanded}"><span class="themeLabel">${children.length ? `<span class="themeDisclosure" aria-hidden="true">${expanded ? '⌄' : '›'}</span>` : ''}${escapeHtml(theme.name)}</span><span class="themeCount">${count}</span></button><button class="themeHome" data-theme-home="${theme.id}" type="button" title="${homeAction} de ${escapeHtml(theme.name)}" aria-label="${homeAction} de ${escapeHtml(theme.name)}">⌂</button><button class="addSubtheme" data-add-subtheme="${theme.id}" type="button" title="Adicionar subtema a ${escapeHtml(theme.name)}" aria-label="Adicionar subtema a ${escapeHtml(theme.name)}">＋</button></div>${children.length ? `<div class="subthemeList"${expanded ? '' : ' hidden'}>${childItems}</div>` : ''}</div>`;
   }).join('');
   document.querySelectorAll('[data-theme]').forEach(button => button.onclick = () => {
     const id = Number(button.dataset.theme);
@@ -148,13 +150,25 @@ async function loadThemes() {
     selectTheme(id);
   });
   document.querySelectorAll('[data-add-subtheme]').forEach(button => button.onclick = () => addSubtheme(Number(button.dataset.addSubtheme)));
+  document.querySelectorAll('[data-theme-home]').forEach(button => button.onclick = () => openThemeHome(Number(button.dataset.themeHome)));
 }
 
-function selectTheme(theme) {
+async function openThemeHome(themeId) {
+  const theme = themes.find(item => item.id === themeId);
+  if (!theme) return;
+  try {
+    if (theme.home_article_id) {
+      fillEditor(await api('/api/articles/' + theme.home_article_id));
+      $('#editorDialog').showModal();
+    } else fresh({ themeId, isThemeHome: true });
+  } catch (error) { toast(error.message); }
+}
+
+async function selectTheme(theme) {
   selectedTheme = theme;
   $('#search').value = '';
-  loadThemes();
-  renderList();
+  await loadThemes();
+  await renderList(true);
 }
 
 async function addSubtheme(parentId) {
@@ -170,7 +184,7 @@ async function addSubtheme(parentId) {
   } catch (error) { toast(error.message); }
 }
 
-async function renderList() {
+async function renderList(openFirstArticle = false) {
   const query = $('#search').value.trim();
   const params = new URLSearchParams();
   if (query) params.set('q', query);
@@ -178,11 +192,14 @@ async function renderList() {
   try {
     const articles = await api('/api/articles' + (params.size ? '?' + params : ''));
     $('#count').textContent = articles.length + (articles.length === 1 ? ' artigo' : ' artigos');
+    themeNavigation = selectedTheme && !query ? articles : [];
     $('#articleList').innerHTML = articles.map(article => {
       const description = article.authors.map(author => author.name).join(', ') || article.summary || article.theme?.name || 'Sem informações';
-      return `<button class="article ${article.id === currentArticle?.id ? 'active' : ''}" data-id="${article.id}" type="button"><b>${escapeHtml(article.title)}</b><small>${escapeHtml(description)}</small></button>`;
+      return `<button class="article ${article.id === currentArticle?.id ? 'active' : ''}" data-id="${article.id}" type="button"><b>${article.is_theme_home ? '⌂ ' : ''}${escapeHtml(article.title)}</b><small>${escapeHtml(description)}</small></button>`;
     }).join('') || '<p class="muted">Nenhum artigo encontrado.</p>';
     document.querySelectorAll('.article').forEach(button => button.onclick = () => loadArticle(Number(button.dataset.id)));
+    updateThemeNavigation();
+    if (openFirstArticle && articles.length) await loadArticle(articles[0].id);
   } catch (error) { toast(error.message); }
 }
 
@@ -215,6 +232,24 @@ function renderReader() {
   $('#readerTitle').style.color = currentArticle.title_color || '#253229';
   $('#readerContent').innerHTML = currentArticle.content || '<p class="muted">Este artigo ainda não possui conteúdo.</p>';
   $('#reader').scrollIntoView({ block: 'start' });
+}
+
+function updateThemeNavigation() {
+  const navigation = $('#themeArticleNav');
+  const index = themeNavigation.findIndex(article => article.id === currentArticle?.id);
+  const visible = index >= 0 && themeNavigation.length > 0;
+  navigation.hidden = !visible;
+  if (!visible) return;
+  $('#themeNavPosition').textContent = `${index + 1}/${themeNavigation.length}`;
+  $('#themeNavHome').disabled = index === 0;
+  $('#themeNavPrevious').disabled = index === 0;
+  $('#themeNavNext').disabled = index === themeNavigation.length - 1;
+  $('#themeNavLast').disabled = index === themeNavigation.length - 1;
+}
+
+function navigateThemeArticle(index) {
+  const article = themeNavigation[index];
+  if (article) loadArticle(article.id);
 }
 
 function printCurrentArticle() {
@@ -315,6 +350,8 @@ function fillEditor(article) {
   $('#titleColor').value = article.title_color || '#253229';
   $('#title').style.color = $('#titleColor').value;
   $('#theme_id').value = article.theme?.id || '';
+  $('#isThemeHome').checked = Boolean(article.is_theme_home);
+  updateThemeHomeControl();
   $('#authors').value = article.authors.map(author => author.name).join(', ');
   $('#tags').value = article.tags.map(tag => tag.name).join(', ');
   $('#sources').value = sourcesText(article.sources);
@@ -330,7 +367,7 @@ function editCurrentArticle() {
   $('#editorDialog').showModal();
 }
 
-function fresh() {
+function fresh(options = {}) {
   selectEditorImage(null);
   editingId = null;
   editorAttachments = [];
@@ -338,6 +375,9 @@ function fresh() {
   $('#articleForm').reset();
   $('#content').innerHTML = '';
   $('#language').value = 'pt-BR';
+  $('#theme_id').value = options.themeId || '';
+  $('#isThemeHome').checked = Boolean(options.isThemeHome);
+  updateThemeHomeControl();
   $('#titleColor').value = '#253229';
   $('#title').style.color = '#253229';
   $('#status').textContent = 'NOVO ARTIGO';
@@ -345,6 +385,16 @@ function fresh() {
   renderAttachments();
   $('#editorDialog').showModal();
   setTimeout(() => $('#title').focus(), 0);
+}
+
+function updateThemeHomeControl() {
+  const control = $('#themeHomeControl');
+  const checkbox = $('#isThemeHome');
+  const theme = themes.find(item => item.id === Number($('#theme_id').value));
+  const isPrincipalTheme = theme && (theme.parent_id === null || theme.parent_id === undefined);
+  control.hidden = !theme;
+  checkbox.disabled = !isPrincipalTheme;
+  if (!isPrincipalTheme) checkbox.checked = false;
 }
 
 function articlePayload() {
@@ -463,10 +513,16 @@ function selectEditorImage(image) {
   selectedEditorImage = image && $('#content')?.contains(image) ? image : null;
   selectedEditorImage?.classList.add('selectedEditorImage');
   const control = $('#imageSize');
-  if (!control) return;
+  const wrapControl = $('#imageWrap');
+  const removeControl = $('#removeEditorImage');
+  if (!control || !wrapControl || !removeControl) return;
   control.disabled = !selectedEditorImage;
+  wrapControl.disabled = !selectedEditorImage;
+  removeControl.disabled = !selectedEditorImage;
   const width = selectedEditorImage?.style.width?.replace('%', '');
   control.value = ['25', '50', '75', '100'].includes(width) ? width : selectedEditorImage ? 'original' : '';
+  const figure = selectedEditorImage?.closest('figure');
+  wrapControl.value = figure?.classList.contains('image-wrap-left') ? 'left' : figure?.classList.contains('image-wrap-right') ? 'right' : selectedEditorImage ? 'center' : '';
 }
 
 function setEditorImageSize(value) {
@@ -480,6 +536,31 @@ function setEditorImageSize(value) {
     selectedEditorImage.style.height = 'auto';
   }
   toast(value === 'original' ? 'Tamanho original aplicado.' : `Imagem ajustada para ${value}% do texto.`);
+}
+
+function setEditorImageWrap(value) {
+  if (!selectedEditorImage || !$('#content').contains(selectedEditorImage)) return selectEditorImage(null);
+  const figure = selectedEditorImage.closest('figure');
+  if (!figure) return toast('Esta imagem não pode ser reposicionada. Insira-a novamente pelo editor.');
+  figure.classList.remove('image-wrap-left', 'image-wrap-right');
+  if (value === 'left') figure.classList.add('image-wrap-left');
+  if (value === 'right') figure.classList.add('image-wrap-right');
+  $('#content').focus();
+  toast(value === 'left' ? 'Imagem à esquerda com texto ao redor.' : value === 'right' ? 'Imagem à direita com texto ao redor.' : 'Imagem mantida em linha própria.');
+}
+
+function removeEditorImage() {
+  if (!selectedEditorImage || !$('#content').contains(selectedEditorImage)) return selectEditorImage(null);
+  if (!confirm('Remover esta imagem do texto? O arquivo continuará disponível no painel de fotos e vídeos.')) return;
+  const figure = selectedEditorImage.closest('figure');
+  const item = figure || selectedEditorImage;
+  const following = item.nextElementSibling;
+  item.remove();
+  if (following?.tagName === 'P' && !following.textContent.trim() && following.querySelector('br')) following.remove();
+  selectEditorImage(null);
+  renderAttachments();
+  $('#content').focus();
+  toast('Imagem removida do texto. Salve o artigo para confirmar.');
 }
 
 function setupRichEditor() {
@@ -501,6 +582,8 @@ function setupRichEditor() {
   $('#fontSize').onchange = event => { if (event.target.value) runCommand('fontSize', event.target.value); event.target.value = ''; };
   $('#lineSpacing').onchange = event => { if (event.target.value) setLineSpacing(event.target.value); event.target.value = ''; };
   $('#imageSize').onchange = event => setEditorImageSize(event.target.value);
+  $('#imageWrap').onchange = event => setEditorImageWrap(event.target.value);
+  $('#removeEditorImage').onclick = removeEditorImage;
   $('#fontColor').oninput = event => runCommand('foreColor', event.target.value);
   $('#insertLink').onclick = () => { const href = prompt('Endereço do link:'); if (href) runCommand('createLink', href.trim()); };
   $('#insertImage').onclick = () => { rememberSelection(); $('#inlineImageInput').click(); };
@@ -799,12 +882,17 @@ $('#editArticle').onclick = editCurrentArticle;
 $('#printArticle').onclick = printCurrentArticle;
 $('#openArticleCarousel').onclick = openArticleCarousel;
 $('#confirmPrint').onclick = confirmArticlePrint;
+$('#themeNavHome').onclick = () => navigateThemeArticle(0);
+$('#themeNavPrevious').onclick = () => navigateThemeArticle(themeNavigation.findIndex(article => article.id === currentArticle?.id) - 1);
+$('#themeNavNext').onclick = () => navigateThemeArticle(themeNavigation.findIndex(article => article.id === currentArticle?.id) + 1);
+$('#themeNavLast').onclick = () => navigateThemeArticle(themeNavigation.length - 1);
 $('#newArticle').onclick = fresh;
 $('#sidebarNewArticle').onclick = fresh;
 $('#emptyNew').onclick = fresh;
 $('#allThemes').onclick = () => selectTheme(null);
 $('#searchButton').onclick = renderList;
 $('#titleColor').oninput = event => { $('#title').style.color = event.target.value; };
+$('#theme_id').onchange = updateThemeHomeControl;
 $('#search').oninput = () => { if ($('#search').value.trim()) selectedTheme = null; clearTimeout(window.searchDelay); window.searchDelay = setTimeout(() => { loadThemes(); renderList(); }, 220); };
 $('#addTheme').onclick = async () => {
   const name = prompt('Nome do novo tema:');
