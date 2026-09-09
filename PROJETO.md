@@ -19,15 +19,20 @@ O público esperado é de uma a três pessoas. A aplicação prioriza simplicida
 ## 2. Estado atual
 
 - Repositório: `https://github.com/diogenesrsantos/biblio`
-- Branch principal: `master`
-- Tag mais recente preparada: `v0.1.9`
-- Commit funcional atual: `f0abf1d`, com recurso de tabelas em desenvolvimento local
+- Branch principal histórica: `master` (ainda não contém a linha SQLite recente)
+- Linha funcional atual: `feat/editor-tables-columns` em `8fe3c25`
+- Tag mais recente: `v0.1.9` (`f0abf1d`)
+- Estado de produção: código de `8fe3c25` publicado diretamente na VPS; a próxima release ainda não foi criada
 - Versão declarada no `package.json`: `0.1.9`
 - Runtime: Node.js 22
 - Banco padrão da versão atual: SQLite
 - Interface: HTML, CSS e JavaScript, instalável como PWA
 - Aplicação desktop: Electron
 - Servidor HTTP: implementação nativa do Node.js, sem framework web
+
+### Estado da implantação atual
+
+A VPS executa uma única instância da Biblio com SQLite, serviço `systemd` ativo e endpoint local de saúde confirmado. O código fica em `/opt/biblio`; banco, mídias e configuração privada permanecem fora desse diretório. A publicação mais recente foi feita por sincronização de código, sem apagar dados persistentes, e inclui tabelas, texto em colunas e justificação.
 
 ## 3. Decisões de arquitetura
 
@@ -163,6 +168,7 @@ O cache atual é identificado como `biblio-shell-v35`.
 - O editor permite inserir tabelas com cabeçalho, escolher linhas e colunas e acrescentar ou remover linhas e colunas enquanto edita.
 - As tabelas são preservadas de forma segura, adaptam-se a telas estreitas e são incluídas na pré-visualização e impressão.
 - O menu de parágrafo permite alinhar blocos à esquerda, ao centro, à direita ou de modo justificado.
+- A justificação é aplicada diretamente no bloco selecionado como `text-align: justify`, evitando diferenças de implementação entre navegadores.
 - A cor do título possui controle próprio e é preservada junto ao artigo.
 - Imagens escolhidas no campo de mídias são incorporadas na posição atual do cursor; vídeos permanecem como anexos.
 - Imagens selecionadas no editor podem usar largura de 25%, 50%, 75%, 100% ou o tamanho original; a dimensão é preservada na leitura e na impressão.
@@ -255,7 +261,9 @@ Os dados desktop ficam na subpasta `data` do diretório de dados do usuário for
 
 ### Estado da publicação
 
-O workflow gera os instaladores Windows e Linux, publica-os como artifacts e, em tags `v*`, tenta criar a GitHub Release com esses arquivos. A configuração atual usa `gh release create` com o token do GitHub Actions. A publicação deve ser conferida na próxima tag antes de ser considerada estável.
+O workflow gera os instaladores Windows e Linux, publica-os como artifacts e, em tags `v*`, tenta criar a GitHub Release com esses arquivos. A configuração atual usa `gh release create` com o token do GitHub Actions.
+
+Na tag `v0.1.9`, os jobs Windows e Linux concluíram com sucesso, mas o job `release` falhou e nenhuma página de Release foi criada. Antes da próxima tag, corrigir e testar esse job, incluindo as permissões efetivas de escrita do `GITHUB_TOKEN`. O aviso do runner sobre Node 20 vem de `actions/download-artifact@v5`; atualizar essa action para a versão atual compatível com Node 24 elimina o aviso, sem exigir migração do runtime da aplicação, que permanece em Node 22.
 
 ## 14. Histórico relevante
 
@@ -274,6 +282,7 @@ O workflow gera os instaladores Windows e Linux, publica-os como artifacts e, em
 | `6792613` / `v0.1.7` | Separação dos dados para permitir restauração no Windows |
 | `98434b2` / `v0.1.8` | Preparação da versão SQLite com subtemas |
 | `v0.1.9` | Artigos de apresentação por tema, navegação entre artigos e aperfeiçoamentos no editor de imagens |
+| `8fe3c25` | Tabelas no editor, blocos de texto em duas ou três colunas e alinhamento justificado persistente |
 
 Branches remotas relevantes:
 
@@ -281,6 +290,8 @@ Branches remotas relevantes:
 - `feature/editor-visual`: base histórica do editor;
 - `feat/portable-installers`: implementação portátil inicial;
 - `fix/installer-workflow`: correção inicial da automação.
+- `feat/sqlite-subtemas`: base da `v0.1.9`.
+- `feat/editor-tables-columns`: linha atual com os recursos de tabelas, colunas e justificação.
 
 ## 15. Instalação e operação documentadas
 
@@ -302,9 +313,19 @@ Estrutura definida:
 
 O serviço roda como usuário `biblio`, grava apenas em `/var/lib/biblio`, atende em loopback e é publicado por Nginx com HTTPS.
 
+### Atualização segura da VPS
+
+1. Validar sintaxe e `git diff --check` localmente.
+2. Sincronizar o código para `/opt/biblio`, excluindo `.git`, `.env`, `node_modules`, `data`, `dist`, `install` e arquivos de teste.
+3. Executar `npm ci --omit=dev` na VPS apenas quando `package-lock.json` ou dependências mudarem.
+4. Reiniciar `biblio` e confirmar `systemctl is-active biblio` e `curl -fsS http://127.0.0.1:8080/api/health`.
+5. Para mudanças de interface, aumentar a versão de cache em `public/sw.js` e alterar os parâmetros de versão de `style.css` e `app.js` em `public/index.html`.
+
+Nunca sincronizar `data/` para atualizar o código. Após o último `npm ci`, o auditor do npm relatou uma vulnerabilidade alta transitiva; investigar a cadeia e atualizar de forma controlada, sem usar `npm audit fix --force` diretamente na VPS.
+
 ## 17. Pendências conhecidas
 
-1. Corrigir o job `release` para publicar instaladores em uma página permanente do GitHub.
+1. Corrigir o job `release` da tag `v0.1.9` e atualizar `actions/download-artifact` para uma versão que use Node 24.
 2. Adicionar ícones próprios nos instaladores Electron; atualmente o empacotador pode usar o ícone padrão.
 3. Criar testes automatizados para API, banco, backup e restauração.
 4. Modularizar `server.js`, que ainda concentra muitas responsabilidades.
@@ -322,8 +343,8 @@ O serviço roda como usuário `biblio`, grava apenas em `/var/lib/biblio`, atend
 
 ## 19. Próxima sequência recomendada
 
-1. Validar a publicação da próxima tag em GitHub Releases.
-2. Criar testes automatizados para os fluxos já validados manualmente.
-3. Implantar a VPS SQLite seguindo o manual próprio.
+1. Abrir ou integrar a branch `feat/editor-tables-columns` e preparar a próxima versão, sem reutilizar a tag `v0.1.9`.
+2. Corrigir o job de release e validar uma tag completa, com installers e página GitHub Release.
+3. Criar testes automatizados para sanitização de tabelas/colunas/justificação, API, banco, backup e restauração.
 4. Criar backup externo da VPS e testar uma restauração completa.
-5. Somente então declarar uma nova versão estável.
+5. Só então declarar a próxima versão estável.
