@@ -22,8 +22,9 @@ O público esperado é de uma a três pessoas. A aplicação prioriza simplicida
 - Branch principal histórica: `master` (ainda não contém a linha SQLite recente)
 - Linha funcional atual: `feat/editor-tables-columns` em `8fe3c25`
 - Tag mais recente: `v0.1.9` (`f0abf1d`)
+- Próxima tag de compilação: `v0.1.10`
 - Estado de produção: código de `8fe3c25` publicado diretamente na VPS; a próxima release ainda não foi criada
-- Versão declarada no `package.json`: `0.1.9`
+- Versão declarada no `package.json`: `0.1.10`
 - Runtime: Node.js 22
 - Banco padrão da versão atual: SQLite
 - Interface: HTML, CSS e JavaScript, instalável como PWA
