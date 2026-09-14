@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#263229">
   <meta name="description" content="Biblioteca pessoal de artigos e referências.">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/style.css?v=library-home-v1">
+  <link rel="stylesheet" href="/style.css?v=bible-v1">
   <title>Biblio</title>
 </head>
 <body>
@@ -51,6 +51,16 @@
       <button id="libraryHome" class="theme libraryHome" type="button"><span>⌂ Página inicial</span></button>
       <button id="allThemes" class="theme active" type="button"><span>Todos os artigos</span><span id="allCount" class="themeCount"></span></button>
       <div id="themeList" class="themeList"></div>
+      <div class="sectionHeading bibleSectionHeading"><p class="eyebrow">BÍBLIA SAGRADA</p></div>
+      <button id="bibleToggle" class="theme bibleToggle" type="button" aria-expanded="false"><span>✚ Bíblia Livre</span><span class="themeCount">66</span></button>
+      <div id="biblePanel" class="biblePanel" hidden>
+        <label class="bibleSearchBox"><input id="bibleSearch" placeholder="Palavra ou João 3:16" aria-label="Pesquisar na Bíblia"><button id="bibleSearchButton" type="button" aria-label="Pesquisar na Bíblia">⌕</button></label>
+        <button class="bibleTestament" data-bible-testament="old" type="button" aria-expanded="false"><span>Velho Testamento</span><span>39</span></button>
+        <div id="bibleOldBooks" class="bibleBooks" hidden></div>
+        <button class="bibleTestament" data-bible-testament="new" type="button" aria-expanded="false"><span>Novo Testamento</span><span>27</span></button>
+        <div id="bibleNewBooks" class="bibleBooks" hidden></div>
+        <button id="bibleAbout" class="bibleAbout" type="button">Sobre esta tradução</button>
+      </div>
       <div class="sectionHeading resultsHeading"><p class="eyebrow">RESULTADOS</p><p id="count" class="muted"></p></div>
       <div id="articleList" class="articleList"></div>
     </aside>
@@ -63,7 +73,7 @@
         <button id="themeNavNext" type="button" title="Próximo artigo" aria-label="Próximo artigo">›</button>
         <button id="themeNavLast" type="button" title="Último artigo do tema" aria-label="Último artigo do tema">»</button>
       </nav>
-      <nav class="readerActions" aria-label="Ações do documento">
+      <nav id="readerActions" class="readerActions" aria-label="Ações do documento">
         <button id="showInfo" class="actionButton" type="button" title="Informações do artigo" aria-label="Informações do artigo" disabled>ⓘ</button>
         <button id="editArticle" class="actionButton" type="button" title="Editar artigo" aria-label="Editar artigo" disabled>✎</button>
         <button id="printArticle" class="actionButton" type="button" title="Imprimir artigo" aria-label="Imprimir artigo" disabled>⎙</button>
@@ -73,6 +83,11 @@
       </nav>
       <section id="welcome" class="welcomeState"><div class="welcomeMark" aria-hidden="true">B</div><p class="eyebrow">SUA BIBLIOTECA</p><h1>Carregando página inicial…</h1></section>
       <article id="reader" class="reader" hidden><h1 id="readerTitle"></h1><div id="readerContent" class="readerContent"></div></article>
+      <article id="bibleReader" class="bibleReader" hidden>
+        <header class="bibleReaderHeader"><div><p class="eyebrow">BÍBLIA SAGRADA · BLIVRE</p><h1 id="bibleReaderTitle">Bíblia Livre</h1></div><nav id="bibleChapterNav" class="bibleChapterNav" aria-label="Navegação dos capítulos" hidden><button id="biblePrevious" type="button" aria-label="Capítulo anterior">‹</button><span id="biblePosition"></span><button id="bibleNext" type="button" aria-label="Próximo capítulo">›</button></nav></header>
+        <div id="bibleReaderContent" class="bibleReaderContent"></div>
+        <footer id="bibleLicense" class="bibleLicense"></footer>
+      </article>
     </section>
 
     <aside id="mediaPanel" class="mediaPanel" aria-hidden="true">
@@ -151,6 +166,6 @@
 
   <div id="welcomePopup" class="welcomePopup" role="dialog" aria-modal="true" aria-label="Boas-vindas à biblioteca" hidden><button id="welcomeArtwork" class="welcomeArtwork" type="button" aria-label="Entrar na biblioteca"><img src="/brand/reverendo-albert-boas-vindas.png" alt="Reverendo Albert em composição cristã com Bíblia, cruz e luz celestial"><span>Clique na imagem para entrar</span></button></div>
   <div id="imageModal" class="imageModal" hidden><button id="closeImage" type="button" class="closeImage" aria-label="Fechar imagem">×</button><button id="previousImage" type="button" class="imageArrow imagePrevious" aria-label="Imagem anterior">‹</button><figure><img alt=""><figcaption id="imageCaption"></figcaption></figure><button id="nextImage" type="button" class="imageArrow imageNext" aria-label="Próxima imagem">›</button></div>
-  <div id="toast" role="status" aria-live="polite"></div><script src="/api.js?v=library-home-v1"></script><script src="/app.js?v=library-home-v1"></script>
+  <div id="toast" role="status" aria-live="polite"></div><script src="/api.js?v=bible-v1"></script><script src="/app.js?v=bible-v1"></script>
 </body>
 </html>

@@ -21,6 +21,10 @@ let backupWritable = null;
 let backupBusy = false;
 let backupCompleted = false;
 let selectedEditorImage = null;
+let bibleData = null;
+let selectedBibleBook = null;
+let selectedBibleChapter = null;
+const expandedBibleTestaments = new Set();
 const visualThemes = ['classic', 'ocean', 'sepia', 'rose', 'lavender', 'slate'];
 
 function storedVisualTheme() {
@@ -210,6 +214,116 @@ async function loadArticle(id) {
   } catch (error) { toast(error.message); }
 }
 
+const normalizedBibleName = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+function showBibleReader(title, content, { navigation = false, license = true } = {}) {
+  currentArticle = null;
+  themeNavigation = [];
+  $('#welcome').hidden = true;
+  $('#reader').hidden = true;
+  $('#readerActions').hidden = true;
+  $('#themeArticleNav').hidden = true;
+  $('#bibleReader').hidden = false;
+  $('#bibleReaderTitle').textContent = title;
+  $('#bibleReaderContent').innerHTML = content;
+  $('#bibleChapterNav').hidden = !navigation;
+  $('#bibleLicense').hidden = !license;
+  $('#libraryHome').classList.remove('active');
+  $('#allThemes').classList.remove('active');
+  $('#bibleToggle').classList.add('active');
+  toggleMedia(false);
+  $('#bibleReader').scrollIntoView({ block: 'start' });
+}
+
+function bibleLicenseHtml() {
+  const translation = bibleData?.translation;
+  if (!translation) return '';
+  return `${escapeHtml(translation.license)}<br>Versão da fonte: ${escapeHtml(translation.source_version)} · <a href="${escapeHtml(translation.source_url)}" target="_blank" rel="noopener noreferrer">Fonte e informações da tradução</a>`;
+}
+
+function showBibleLanding() {
+  showBibleReader('Bíblia Livre', '<div class="bibleLanding"><div class="bibleLandingMark">✚</div><p class="eyebrow">LEITURA OFFLINE</p><h2>Escolha um testamento,<br>livro e capítulo.</h2><p class="muted">Use também a pesquisa exclusiva da Bíblia.</p></div>');
+  $('#bibleLicense').innerHTML = bibleLicenseHtml();
+}
+
+async function loadBibleIndex(showLanding = true) {
+  if (!bibleData) bibleData = await api('/api/bible');
+  renderBibleMenu();
+  if (showLanding) showBibleLanding();
+  return bibleData;
+}
+
+function renderBibleMenu() {
+  if (!bibleData) return;
+  for (const testament of ['old', 'new']) {
+    const container = testament === 'old' ? $('#bibleOldBooks') : $('#bibleNewBooks');
+    container.hidden = !expandedBibleTestaments.has(testament);
+    const books = bibleData.books.filter(book => book.testament === testament);
+    container.innerHTML = books.map(book => {
+      const selected = selectedBibleBook?.code === book.code;
+      const chapters = selected ? `<div class="bibleChapters">${Array.from({ length: book.chapter_count }, (_, index) => `<button type="button" data-bible-chapter="${index + 1}" class="${selectedBibleChapter === index + 1 ? 'active' : ''}">${index + 1}</button>`).join('')}</div>` : '';
+      return `<div><button class="bibleBook ${selected ? 'active' : ''}" type="button" data-bible-book="${book.code}"><span>${escapeHtml(book.name)}</span><span>${book.chapter_count}</span></button>${chapters}</div>`;
+    }).join('');
+  }
+  document.querySelectorAll('[data-bible-testament]').forEach(button => {
+    const expanded = expandedBibleTestaments.has(button.dataset.bibleTestament);
+    button.setAttribute('aria-expanded', String(expanded));
+  });
+  document.querySelectorAll('[data-bible-book]').forEach(button => button.onclick = () => {
+    selectedBibleBook = bibleData.books.find(book => book.code === button.dataset.bibleBook);
+    selectedBibleChapter = null;
+    renderBibleMenu();
+  });
+  document.querySelectorAll('[data-bible-chapter]').forEach(button => button.onclick = () => loadBibleChapter(selectedBibleBook.code, Number(button.dataset.bibleChapter)));
+}
+
+async function loadBibleChapter(code, chapter, verse = null) {
+  try {
+    await loadBibleIndex(false);
+    const data = await api(`/api/bible/books/${code}/chapters/${chapter}`);
+    selectedBibleBook = bibleData.books.find(book => book.code === code);
+    selectedBibleChapter = chapter;
+    const verses = data.verses.map(item => `<span id="bible-verse-${escapeHtml(item.verse)}" class="bibleVerse${String(item.verse) === String(verse) ? ' highlight' : ''}"><sup class="bibleVerseNumber">${escapeHtml(item.verse)}</sup>${escapeHtml(item.text)} </span>`).join('');
+    showBibleReader(`${data.book.name} ${chapter}`, `<div class="bibleVerses">${verses}</div>`, { navigation: true });
+    $('#biblePosition').textContent = `${data.book.name} ${chapter}`;
+    $('#bibleLicense').innerHTML = bibleLicenseHtml();
+    renderBibleMenu();
+    if (verse) setTimeout(() => document.getElementById(`bible-verse-${verse}`)?.scrollIntoView({ block: 'center' }), 0);
+  } catch (error) { toast(error.message); }
+}
+
+function adjacentBibleChapter(direction) {
+  if (!selectedBibleBook || !selectedBibleChapter || !bibleData) return;
+  const index = bibleData.books.findIndex(book => book.code === selectedBibleBook.code);
+  let book = selectedBibleBook, chapter = selectedBibleChapter + direction;
+  if (chapter < 1 && index > 0) { book = bibleData.books[index - 1]; chapter = book.chapter_count; }
+  if (chapter > book.chapter_count && index < bibleData.books.length - 1) { book = bibleData.books[index + 1]; chapter = 1; }
+  if (chapter >= 1 && chapter <= book.chapter_count) loadBibleChapter(book.code, chapter);
+}
+
+async function searchBible() {
+  const term = $('#bibleSearch').value.trim();
+  if (term.length < 2) return toast('Digite pelo menos duas letras para pesquisar na Bíblia.');
+  try {
+    await loadBibleIndex(false);
+    const reference = term.match(/^(.+?)\s+(\d+)(?::(\d+))?$/);
+    if (reference) {
+      const bookName = normalizedBibleName(reference[1]);
+      const book = bibleData.books.find(item => normalizedBibleName(item.name) === bookName || normalizedBibleName(item.code) === bookName);
+      if (book) return loadBibleChapter(book.code, Number(reference[2]), reference[3] || null);
+    }
+    const response = await api('/api/bible/search?q=' + encodeURIComponent(term));
+    const content = response.results.length ? `<div class="bibleSearchResults">${response.results.map(item => `<button class="bibleSearchResult" type="button" data-bible-result="${item.code}:${item.chapter}:${item.verse}"><strong>${escapeHtml(item.book_name)} ${item.chapter}:${escapeHtml(item.verse)}</strong><span>${escapeHtml(item.text)}</span></button>`).join('')}</div>` : '<p class="bibleSearchEmpty">Nenhum versículo encontrado.</p>';
+    showBibleReader(`Pesquisa: ${term}`, content, { navigation: false });
+    $('#bibleLicense').innerHTML = bibleLicenseHtml();
+    document.querySelectorAll('[data-bible-result]').forEach(button => button.onclick = () => { const [book, chapter, verse] = button.dataset.bibleResult.split(':'); loadBibleChapter(book, Number(chapter), verse); });
+  } catch (error) { toast(error.message); }
+}
+
+function showBibleAbout() {
+  showBibleReader('Sobre a Bíblia Livre', `<div class="bibleLanding"><div class="bibleLandingMark">BL</div><h2>${escapeHtml(bibleData.translation.name)}</h2><p>${escapeHtml(bibleData.translation.license)}</p><p>Texto armazenado localmente e disponível sem conexão com a internet.</p><p><a href="${escapeHtml(bibleData.translation.source_url)}" target="_blank" rel="noopener noreferrer">Consultar fonte e licença</a></p></div>`, { navigation: false, license: false });
+}
+
 async function loadLibraryHome() {
   try {
     currentArticle = await api('/api/home');
@@ -225,6 +339,9 @@ function renderReader() {
   const hasArticle = Boolean(currentArticle);
   $('#welcome').hidden = hasArticle;
   $('#reader').hidden = !hasArticle;
+  $('#bibleReader').hidden = true;
+  $('#readerActions').hidden = false;
+  $('#bibleToggle').classList.remove('active');
   $('#showInfo').disabled = !hasArticle;
   $('#editArticle').disabled = !hasArticle;
   $('#printArticle').disabled = !hasArticle;
@@ -1150,6 +1267,27 @@ $('#themeNavLast').onclick = () => navigateThemeArticle(themeNavigation.length -
 $('#newArticle').onclick = fresh;
 $('#sidebarNewArticle').onclick = fresh;
 $('#libraryHome').onclick = loadLibraryHome;
+$('#bibleToggle').onclick = async () => {
+  try {
+    const panel = $('#biblePanel');
+    panel.hidden = !panel.hidden;
+    $('#bibleToggle').setAttribute('aria-expanded', String(!panel.hidden));
+    if (!panel.hidden) await loadBibleIndex($('#bibleReader').hidden);
+  } catch (error) { toast(error.message); }
+};
+document.querySelectorAll('[data-bible-testament]').forEach(button => button.onclick = async () => {
+  try {
+    await loadBibleIndex(false);
+    const testament = button.dataset.bibleTestament;
+    expandedBibleTestaments.has(testament) ? expandedBibleTestaments.delete(testament) : expandedBibleTestaments.add(testament);
+    renderBibleMenu();
+  } catch (error) { toast(error.message); }
+});
+$('#bibleSearchButton').onclick = searchBible;
+$('#bibleSearch').onkeydown = event => { if (event.key === 'Enter') { event.preventDefault(); searchBible(); } };
+$('#biblePrevious').onclick = () => adjacentBibleChapter(-1);
+$('#bibleNext').onclick = () => adjacentBibleChapter(1);
+$('#bibleAbout').onclick = async () => { await loadBibleIndex(false); showBibleAbout(); };
 $('#allThemes').onclick = () => selectTheme(null);
 $('#searchButton').onclick = renderList;
 $('#titleColor').oninput = event => { $('#title').style.color = event.target.value; };

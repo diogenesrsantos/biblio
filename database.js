@@ -13,9 +13,10 @@ function isReturning(sql) {
   return /^\s*(SELECT|WITH|PRAGMA)\b/i.test(sql) || /\bRETURNING\b/i.test(sql);
 }
 
-function createDatabase(file) {
-  const db = new Database(file);
-  db.pragma('journal_mode = WAL');
+function createDatabase(file, options = {}) {
+  const db = new Database(file, options.readonly ? { readonly: true, fileMustExist: true } : undefined);
+  const statements = new Map();
+  if (!options.readonly) db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
 
   const query = async (sql, values = []) => {
@@ -27,7 +28,8 @@ function createDatabase(file) {
       db.exec(preparedSql);
       return { rows: [], rowCount: 0 };
     }
-    const statement = db.prepare(preparedSql);
+    let statement = statements.get(preparedSql);
+    if (!statement) { statement = db.prepare(preparedSql); statements.set(preparedSql, statement); }
     if (isReturning(sql)) {
       const rows = statement.all(...preparedValues);
       return { rows, rowCount: rows.length };
@@ -39,10 +41,14 @@ function createDatabase(file) {
   return {
     query,
     connect: async () => ({ query, release() {} }),
-    close() { db.close(); },
+    close() { statements.clear(); db.close(); },
     checkpoint() { db.pragma('wal_checkpoint(TRUNCATE)'); },
     backup(destination) { return db.backup(destination); },
-    integrityCheck() { return db.pragma('integrity_check').map(row => row.integrity_check); }
+    integrityCheck() { return db.pragma('integrity_check').map(row => row.integrity_check); },
+    insertBibleVerses(rows) {
+      const statement = db.prepare('INSERT INTO bible_verses(translation_id,book_id,chapter,verse,verse_order,text) VALUES(?,?,?,?,?,?)');
+      for (const row of rows) statement.run(row.translationId,row.bookId,row.chapter,row.verse,row.verseOrder,row.text);
+    }
   };
 }
 

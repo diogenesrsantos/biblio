@@ -1,6 +1,6 @@
 {
   "name": "biblio-pessoal",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "private": true,
   "description": "Biblioteca pessoal de artigos, fontes e mídias.",
   "desktopName": "biblio-pessoal.desktop",
@@ -15,6 +15,7 @@
     "dev": "node --watch server.js",
     "test": "node --test --test-concurrency=1",
     "backup": "node scripts/backup.js",
+    "build:bible": "node scripts/build-bible.js",
     "restore": "node scripts/restore.js",
     "rebuild:desktop": "electron-rebuild -f -w better-sqlite3",
     "dist": "electron-builder",
@@ -30,7 +31,8 @@
     "productName": "Biblio",
     "asar": true,
     "asarUnpack": [
-      "node_modules/better-sqlite3/**"
+      "node_modules/better-sqlite3/**",
+      "resources/bible/bible.sqlite"
     ],
     "files": [
       "**/*",

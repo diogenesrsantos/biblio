@@ -10,6 +10,12 @@ A interface separa leitura e edição: o documento aberto exibe apenas título e
 
 A página inicial é um documento visual editável. Ela é criada automaticamente com um conteúdo básico, abre após o acesso e pode receber a mesma formatação, imagens e tabelas dos artigos comuns.
 
+## Bíblia Sagrada offline
+
+O módulo **Bíblia Sagrada** inclui a Bíblia Livre 2018 em português brasileiro, com cânon protestante de 66 livros. Velho e Novo Testamento, livros, capítulos e 31.102 versículos ficam em tabelas SQLite separadas e funcionam sem internet. A Bíblia possui pesquisa própria e nunca aparece na pesquisa geral da biblioteca.
+
+Todas as Escrituras em português do módulo são da Bíblia Livre (BLIVRE), Copyright © 2018 Diego Santos, Mario Sérgio e Marco Teles, sob licença Creative Commons Atribuição 4.0 Brasil. Os créditos completos e a procedência estão em [resources/bible/README.md](resources/bible/README.md) e na própria interface.
+
 Consulte [INSTALL.md](INSTALL.md) para gerar e testar instaladores de Windows e Linux.
 
 Para uma implantação dedicada em VPS, siga [VPS-SQLITE-NGINX.md](VPS-SQLITE-NGINX.md).

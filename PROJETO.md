@@ -13,6 +13,7 @@ A Biblio é uma biblioteca particular para registrar e consultar:
 - fontes e referências;
 - imagens e vídeos anexados;
 - imagens inseridas dentro do conteúdo dos artigos.
+- leitura e pesquisa offline da Bíblia Livre 2018, separada do acervo de artigos.
 
 O público esperado é de uma a três pessoas. A aplicação prioriza simplicidade, portabilidade dos dados e operação local ou em uma única VPS.
 
@@ -22,9 +23,9 @@ O público esperado é de uma a três pessoas. A aplicação prioriza simplicida
 - Branch principal histórica: `master` (ainda não contém a linha SQLite recente)
 - Linha funcional atual: `feat/editor-tables-columns`, após a tag `v0.1.10`
 - Tag mais recente no repositório local: `v0.1.10` (`9a560ff`)
-- Próxima versão em desenvolvimento: `0.1.11`
+- Próxima versão em desenvolvimento: `0.1.12`
 - Estado de produção documentado: código de `8fe3c25` publicado diretamente na VPS; confirmar o estado externo antes de nova publicação
-- Versão declarada no `package.json`: `0.1.11`
+- Versão declarada no `package.json`: `0.1.12`
 - Runtime: Node.js 22
 - Banco padrão da versão atual: SQLite
 - Interface: HTML, CSS e JavaScript, instalável como PWA
@@ -89,6 +90,13 @@ Tabelas criadas automaticamente na inicialização:
 - `attachments`: metadados dos arquivos de mídia.
 - `settings`: personalização persistente do cabeçalho e do banner.
 
+O módulo bíblico usa outro banco, `resources/bible/bible.sqlite`, aberto somente para leitura:
+
+- `bible_translations`: tradução, versão, fonte e licença do texto bíblico;
+- `bible_books`: 66 livros e sua divisão entre Velho e Novo Testamento;
+- `bible_verses`: capítulos e 31.102 versículos;
+- `bible_verses_fts`: índice FTS5 usado exclusivamente pela pesquisa bíblica.
+
 Os temas iniciais são Teologia, Filosofia, Culinária e Pensamentos.
 
 ## 6. Segurança implementada
@@ -129,6 +137,9 @@ Em VPS, Nginx e HTTPS são obrigatórios para acesso externo. As portas internas
 |---|---|
 | `GET /api/health` | Saúde da aplicação e banco ativo |
 | `GET /api/diagnostics` | Integridade do SQLite e consistência entre registros e mídias |
+| `GET /api/bible` | Tradução e índice dos 66 livros bíblicos |
+| `GET /api/bible/books/:code/chapters/:chapter` | Lê um capítulo bíblico |
+| `GET /api/bible/search?q=...` | Pesquisa exclusiva nos versículos |
 | `GET /api/auth/status` | Estado de autenticação e configuração inicial |
 | `POST /api/auth/setup` | Cria a primeira conta |
 | `POST /api/auth/login` | Inicia sessão |
@@ -153,7 +164,7 @@ Em VPS, Nginx e HTTPS são obrigatórios para acesso externo. As portas internas
 
 A interface possui manifesto, ícone e service worker. Os arquivos estáticos são armazenados em cache para abertura da interface; artigos e mídias continuam dependendo do servidor.
 
-O cache atual é identificado como `biblio-shell-v35`.
+O cache atual é identificado como `biblio-shell-v39`.
 
 ## 10. Interface de leitura e edição
 
@@ -167,6 +178,9 @@ O cache atual é identificado como `biblio-shell-v35`.
 - Temas do acervo podem conter subtemas. Um clique no tema principal expande ou recolhe os subtemas; o botão `＋` ao lado dele cria um subtema.
 - O documento aberto mostra somente título e conteúdo; os demais metadados ficam em uma janela translúcida própria.
 - A biblioteca possui uma página inicial global, criada automaticamente com conteúdo básico, aberta após o login e editável pelo mesmo editor visual dos artigos. Ela não aparece nos temas nem nos resultados de pesquisa e não pode ser excluída.
+- O menu **Bíblia Sagrada** organiza os 39 livros do Velho Testamento e os 27 do Novo Testamento, abre capítulos, navega entre capítulos e aceita referências como `João 3:16`.
+- A pesquisa bíblica usa seu próprio índice SQLite FTS5. Seus resultados nunca são misturados à pesquisa de artigos.
+- O texto offline é a Bíblia Livre 2018 (BLIVRE), CC BY 4.0 Brasil, importada do pacote USFM oficial da eBible.org. Créditos e procedência permanecem visíveis na interface.
 - Edição e criação usam um editor sobreposto à interface, com fundo desfocado e barra de ferramentas fixa.
 - O editor permite aplicar tamanho e cor ao texto, além das opções de formatação anteriores.
 - O editor permite alterar a entrelinha dos parágrafos entre compacta, normal, confortável e ampla.

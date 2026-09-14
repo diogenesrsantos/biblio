@@ -19,10 +19,10 @@ test('API cobre autenticação, artigos, segurança e diagnóstico', async t => 
     }
     fs.rmSync(dataDir, { recursive: true, force: true });
   });
-  for (let attempt = 0; attempt < 80; attempt++) {
+  for (let attempt = 0; attempt < 240; attempt++) {
     try { if ((await fetch(origin + '/api/health')).ok) break; } catch {}
     await new Promise(resolve => setTimeout(resolve, 50));
-    if (attempt === 79) throw new Error('Servidor de teste não iniciou: ' + errors);
+    if (attempt === 239) throw new Error('Servidor de teste não iniciou: ' + errors);
   }
 
   const health = await fetch(origin + '/api/health');
@@ -33,6 +33,14 @@ test('API cobre autenticação, artigos, segurança e diagnóstico', async t => 
   assert.equal(setup.status, 201);
   const cookie = setup.headers.get('set-cookie').split(';')[0];
   const headers = { 'content-type': 'application/json', cookie, origin };
+  const bible = await fetch(origin + '/api/bible', { headers }).then(response => response.json());
+  assert.equal(bible.books.length, 66);
+  assert.equal(bible.books.filter(book => book.testament === 'old').length, 39);
+  assert.equal(bible.books.filter(book => book.testament === 'new').length, 27);
+  const john316 = await fetch(origin + '/api/bible/books/JHN/chapters/3', { headers }).then(response => response.json());
+  assert.match(john316.verses.find(verse => verse.verse === '16').text, /Deus amou/);
+  const bibleSearch = await fetch(origin + '/api/bible/search?q=' + encodeURIComponent('Deus amou'), { headers }).then(response => response.json());
+  assert.ok(bibleSearch.results.length > 0);
   const home = await fetch(origin + '/api/home', { headers }).then(response => response.json());
   assert.equal(home.is_library_home, 1);
   assert.match(home.content, /Bem-vindo/);
@@ -57,6 +65,7 @@ test('API cobre autenticação, artigos, segurança e diagnóstico', async t => 
   assert.equal(diagnostics.ok, true);
   assert.deepEqual(diagnostics.database, ['ok']);
   assert.deepEqual(diagnostics.media, { missing: [], orphaned: [] });
+  assert.deepEqual(diagnostics.bible, { books: 66, verses: 31102 });
   const backup = await fetch(origin + '/api/backup', { headers });
   assert.equal(backup.status, 200);
   assert.equal(backup.headers.get('content-type'), 'application/zip');

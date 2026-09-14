@@ -42,7 +42,7 @@ function startServer() {
   const modulePath = path.join(__dirname, 'server.js');
   log(`Iniciando servidor: module=${modulePath} data=${dataDir} port=${port} packaged=${app.isPackaged}`);
   server = utilityProcess.fork(modulePath, [], {
-    env: { ...process.env, PORT: String(port), DATA_DIR: dataDir },
+    env: { ...process.env, PORT: String(port), DATA_DIR: dataDir, BIBLE_DB_FILE: app.isPackaged ? path.join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'bible', 'bible.sqlite') : path.join(__dirname, 'resources', 'bible', 'bible.sqlite') },
     stdio: 'pipe',
     serviceName: 'Biblio Server'
   });
