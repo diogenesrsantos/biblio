@@ -41,7 +41,8 @@ function createDatabase(file) {
     connect: async () => ({ query, release() {} }),
     close() { db.close(); },
     checkpoint() { db.pragma('wal_checkpoint(TRUNCATE)'); },
-    backup(destination) { return db.backup(destination); }
+    backup(destination) { return db.backup(destination); },
+    integrityCheck() { return db.pragma('integrity_check').map(row => row.integrity_check); }
   };
 }
 

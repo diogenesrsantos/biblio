@@ -62,16 +62,7 @@ const toast = message => {
   clearTimeout(window.toastDelay);
   window.toastDelay = setTimeout(() => element.classList.remove('show'), 2800);
 };
-const api = async (url, options = {}) => {
-  const response = await fetch(url, { headers: { 'content-type': 'application/json' }, ...options });
-  if (!response.ok && response.status !== 204) {
-    let error = 'Não foi possível concluir a operação.';
-    try { error = (await response.json()).error || error; } catch {}
-    if (response.status === 401) showAuth();
-    throw new Error(error);
-  }
-  return response.status === 204 ? null : response.json();
-};
+const api = (url, options = {}) => window.biblioRequest(url, options, () => showAuth());
 
 function showAuth(configured = true) {
   authMode = configured ? 'login' : 'setup';
@@ -109,7 +100,7 @@ async function boot() {
     currentUser = status.user;
     $('#auth').hidden = true;
     await Promise.all([loadThemes(), loadSettings()]);
-    await renderList();
+    await Promise.all([renderList(), loadLibraryHome()]);
     showWelcomePopup();
   } catch {
     showAuth(true);
@@ -219,6 +210,17 @@ async function loadArticle(id) {
   } catch (error) { toast(error.message); }
 }
 
+async function loadLibraryHome() {
+  try {
+    currentArticle = await api('/api/home');
+    themeNavigation = [];
+    selectedTheme = null;
+    renderReader();
+    renderMedia();
+    updateThemeNavigation();
+  } catch (error) { toast(error.message); }
+}
+
 function renderReader() {
   const hasArticle = Boolean(currentArticle);
   $('#welcome').hidden = hasArticle;
@@ -228,6 +230,9 @@ function renderReader() {
   $('#printArticle').disabled = !hasArticle;
   $('#openArticleCarousel').disabled = !hasArticle;
   $('#toggleMedia').disabled = !hasArticle;
+  const isLibraryHome = Boolean(currentArticle?.is_library_home);
+  $('#libraryHome').classList.toggle('active', isLibraryHome);
+  $('#allThemes').classList.toggle('active', selectedTheme === null && !isLibraryHome);
   if (!hasArticle) return;
   $('#readerTitle').textContent = currentArticle.title;
   $('#readerTitle').style.color = currentArticle.title_color || '#253229';
@@ -347,18 +352,21 @@ function fillEditor(article) {
   selectEditorTableCell(null);
   editingId = article.id;
   editorAttachments = article.attachments || [];
-  $('#status').textContent = 'EDITANDO ARTIGO';
+  const isLibraryHome = Boolean(article.is_library_home);
+  $('#status').textContent = isLibraryHome ? 'EDITANDO PÁGINA INICIAL' : 'EDITANDO ARTIGO';
   ['title', 'summary', 'written_date', 'language'].forEach(key => $('#' + key).value = article[key] || '');
   $('#titleColor').value = article.title_color || '#253229';
   $('#title').style.color = $('#titleColor').value;
   $('#theme_id').value = article.theme?.id || '';
+  $('#theme_id').required = !isLibraryHome;
+  $('#articleMetadataFields').hidden = isLibraryHome;
   $('#isThemeHome').checked = Boolean(article.is_theme_home);
   updateThemeHomeControl();
   $('#authors').value = article.authors.map(author => author.name).join(', ');
   $('#tags').value = article.tags.map(tag => tag.name).join(', ');
   $('#sources').value = sourcesText(article.sources);
   $('#content').innerHTML = article.content || '';
-  $('#remove').hidden = false;
+  $('#remove').hidden = isLibraryHome;
   renderAttachments();
 }
 
@@ -376,6 +384,8 @@ function fresh(options = {}) {
   editorAttachments = [];
   savedRange = null;
   $('#articleForm').reset();
+  $('#articleMetadataFields').hidden = false;
+  $('#theme_id').required = true;
   $('#content').innerHTML = '';
   $('#language').value = 'pt-BR';
   $('#theme_id').value = options.themeId || '';
@@ -411,11 +421,11 @@ function articlePayload() {
 }
 
 async function saveArticle() {
-  if (!$('#articleForm').reportValidity()) throw new Error('Preencha o título e escolha um tema antes de salvar.');
+  if (!$('#articleForm').reportValidity()) throw new Error(currentArticle?.is_library_home ? 'Preencha o título antes de salvar.' : 'Preencha o título e escolha um tema antes de salvar.');
   const article = await api(editingId ? '/api/articles/' + editingId : '/api/articles', { method: editingId ? 'PUT' : 'POST', body: JSON.stringify(articlePayload()) });
   editingId = article.id;
-  $('#status').textContent = 'EDITANDO ARTIGO';
-  $('#remove').hidden = false;
+  $('#status').textContent = article.is_library_home ? 'EDITANDO PÁGINA INICIAL' : 'EDITANDO ARTIGO';
+  $('#remove').hidden = Boolean(article.is_library_home);
   return article;
 }
 
@@ -886,7 +896,11 @@ async function validateAppearanceImage(file, type) {
 async function uploadFile(file) {
   if (!editingId) throw new Error('Salve o artigo antes de enviar anexos.');
   if (file.size > 25 * 1024 * 1024) throw new Error(file.name + ' excede 25 MB.');
-  return api('/api/articles/' + editingId + '/attachments', { method: 'POST', body: JSON.stringify({ name: file.name, dataUrl: await readFile(file) }) });
+  return api('/api/articles/' + editingId + '/attachments', {
+    method: 'POST',
+    headers: { 'content-type': 'application/octet-stream', 'x-file-name': encodeURIComponent(file.name), 'x-mime-type': file.type },
+    body: file
+  });
 }
 
 function insertAttachmentFigure(attachment) {
@@ -986,7 +1000,8 @@ function setupRestore() {
     if (!file) return;
     if (!confirm('A restauração substituirá a biblioteca atual. Uma cópia dos dados atuais será preservada. Continuar?')) { event.target.value = ''; return; }
     try {
-      await api('/api/restore', { method: 'POST', body: JSON.stringify({ dataUrl: await readFile(file) }) });
+      if (file.size > 180 * 1024 * 1024) throw new Error('O backup excede o limite de 180 MB.');
+      await api('/api/restore', { method: 'POST', headers: { 'content-type': file.type || 'application/zip' }, body: file });
       toast('Restauração em andamento. A Biblio será reiniciada.');
     } catch (error) { toast(error.message); }
     finally { event.target.value = ''; }
@@ -1134,7 +1149,7 @@ $('#themeNavNext').onclick = () => navigateThemeArticle(themeNavigation.findInde
 $('#themeNavLast').onclick = () => navigateThemeArticle(themeNavigation.length - 1);
 $('#newArticle').onclick = fresh;
 $('#sidebarNewArticle').onclick = fresh;
-$('#emptyNew').onclick = fresh;
+$('#libraryHome').onclick = loadLibraryHome;
 $('#allThemes').onclick = () => selectTheme(null);
 $('#searchButton').onclick = renderList;
 $('#titleColor').oninput = event => { $('#title').style.color = event.target.value; };
@@ -1159,7 +1174,7 @@ $('#articleForm').onsubmit = async event => {
     renderReader();
     renderMedia();
     await Promise.all([renderList(), loadThemes()]);
-    toast('Artigo salvo. Modo de leitura aberto.');
+    toast(currentArticle.is_library_home ? 'Página inicial salva.' : 'Artigo salvo. Modo de leitura aberto.');
   } catch (error) { toast(error.message); }
 };
 

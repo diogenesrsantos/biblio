@@ -9,7 +9,17 @@ permissions:
   contents: write
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm test
+
   windows:
+    needs: test
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
@@ -27,13 +37,17 @@ jobs:
             exit 1
           }
           node -e "const asar=require('@electron/asar'); JSON.parse(asar.extractFile('dist/win-unpacked/resources/app.asar','package.json').toString()); console.log('app.asar do Windows validado')"
-      - uses: actions/upload-artifact@v4
+          $env:ELECTRON_RUN_AS_NODE = '1'
+          & .\dist\win-unpacked\Biblio.exe -e "require(process.cwd() + '/dist/win-unpacked/resources/app.asar/node_modules/better-sqlite3'); console.log('SQLite nativo do Windows validado')"
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - uses: actions/upload-artifact@v6
         with:
           name: Biblio-Windows
           path: dist/*.exe
           if-no-files-found: error
 
   linux:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -52,7 +66,8 @@ jobs:
             exit "$status"
           }
           node -e "const asar=require('@electron/asar'); JSON.parse(asar.extractFile('dist/linux-unpacked/resources/app.asar','package.json').toString()); console.log('app.asar do Linux validado')"
-      - uses: actions/upload-artifact@v4
+          ELECTRON_RUN_AS_NODE=1 dist/linux-unpacked/biblio-pessoal -e "require(process.cwd() + '/dist/linux-unpacked/resources/app.asar/node_modules/better-sqlite3'); console.log('SQLite nativo do Linux validado')"
+      - uses: actions/upload-artifact@v6
         with:
           name: Biblio-Linux
           path: |
@@ -65,7 +80,7 @@ jobs:
     needs: [windows, linux]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v7
         with:
           path: release
           merge-multiple: true
@@ -73,6 +88,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" release/* \
-            --title "Biblio $GITHUB_REF_NAME" \
-            --notes "Instaladores da Biblio para Windows e Linux. Faça um backup da biblioteca antes de restaurar ou atualizar uma instalação existente."
+          if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" \
+              --title "Biblio $GITHUB_REF_NAME" \
+              --notes "Instaladores da Biblio para Windows e Linux. Faça um backup da biblioteca antes de restaurar ou atualizar uma instalação existente."
+          fi
+          gh release upload "$GITHUB_REF_NAME" release/* --clobber

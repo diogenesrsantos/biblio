@@ -1,22 +1,27 @@
 {
   "name": "biblio-pessoal",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "private": true,
   "description": "Biblioteca pessoal de artigos, fontes e mídias.",
-  "author": { "name": "Diogenes Santos", "email": "diogenesrsantos@users.noreply.github.com" },
+  "desktopName": "biblio-pessoal.desktop",
+  "author": {
+    "name": "Diogenes Santos",
+    "email": "diogenesrsantos@users.noreply.github.com"
+  },
   "main": "desktop.js",
   "scripts": {
     "start": "node server.js",
     "open": "node scripts/launch.js",
     "dev": "node --watch server.js",
+    "test": "node --test --test-concurrency=1",
     "backup": "node scripts/backup.js",
     "restore": "node scripts/restore.js",
-    "rebuild:desktop": "electron-builder install-app-deps",
+    "rebuild:desktop": "electron-rebuild -f -w better-sqlite3",
     "dist": "electron-builder",
     "reset-password": "node scripts/reset-password.js"
   },
   "dependencies": {
-    "adm-zip": "^0.5.16",
+    "adm-zip": "^0.6.1",
     "better-sqlite3": "^12.4.1",
     "sanitize-html": "^2.17.7"
   },
@@ -24,10 +29,39 @@
     "appId": "net.provizi.biblio",
     "productName": "Biblio",
     "asar": true,
-    "asarUnpack": ["node_modules/better-sqlite3/**"],
-    "files": ["**/*", "!data{,/**/*}", "!dist{,/**/*}", "!install{,/**/*}", "!node_modules/.cache{,/**/*}", "!build-*.log", "!testes{,/**/*}"],
-    "linux": { "category": "Office", "target": ["AppImage", "deb"] },
-    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }] },
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**"
+    ],
+    "files": [
+      "**/*",
+      "!data{,/**/*}",
+      "!dist{,/**/*}",
+      "!install{,/**/*}",
+      "!node_modules/.cache{,/**/*}",
+      "!build-*.log",
+      "!testes{,/**/*}",
+      "!test{,/**/*}"
+    ],
+    "linux": {
+      "category": "Office",
+      "syncDesktopName": true,
+      "target": [
+        "AppImage",
+        "deb"
+      ]
+    },
+    "icon": "build/icon.png",
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,

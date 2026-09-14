@@ -8,6 +8,8 @@ O conteúdo dos artigos possui editor visual com títulos, listas, ênfase, link
 
 A interface separa leitura e edição: o documento aberto exibe apenas título e conteúdo, enquanto informações e edição aparecem em janelas sobrepostas. O menu do acervo pode ser recolhido, a galeria de imagens é opcional e o cabeçalho aceita título, subtítulo e banner personalizados.
 
+A página inicial é um documento visual editável. Ela é criada automaticamente com um conteúdo básico, abre após o acesso e pode receber a mesma formatação, imagens e tabelas dos artigos comuns.
+
 Consulte [INSTALL.md](INSTALL.md) para gerar e testar instaladores de Windows e Linux.
 
 Para uma implantação dedicada em VPS, siga [VPS-SQLITE-NGINX.md](VPS-SQLITE-NGINX.md).
@@ -27,6 +29,12 @@ Para desenvolvimento com reinício automático:
 
 ```bash
 npm run dev
+```
+
+Para executar os testes automatizados:
+
+```bash
+npm test
 ```
 
 ## Redefinir a senha
@@ -67,6 +75,8 @@ npm run backup -- E:\Backups
 
 O comando cria um arquivo `.zip` datado, com banco e mídias. Recomenda-se executar semanalmente e testar a restauração em uma cópia do projeto.
 
+Uploads de anexos, restaurações e downloads de backup são transferidos por streaming, evitando a amplificação de memória causada por Base64. O SQLite restaurado é verificado antes de substituir a biblioteca atual.
+
 Com o servidor parado, a restauração também pode ser feita pelo terminal:
 
 ```bash
@@ -79,3 +89,5 @@ npm run restore -- /caminho/para/biblio-backup.zip
 - A instalação local usa SQLite, sem serviço de banco separado.
 - Vídeos e imagens são limitados a 25 MB por arquivo.
 - O HTML produzido pelo editor é sanitizado no servidor antes de ser armazenado.
+- Arquivos de mídia têm formato e assinatura binária validados.
+- `GET /api/diagnostics`, após autenticação, verifica o SQLite e aponta mídias ausentes ou órfãs.

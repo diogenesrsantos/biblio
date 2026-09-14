@@ -114,6 +114,7 @@ body.library-hidden .libraryPanel { overflow: hidden; padding-left: 0; padding-r
 .welcomeState h1 { max-width: 750px; margin: 10px 0 14px; font: 700 clamp(2.25rem, 4vw, 4.6rem)/1.03 Georgia, serif; letter-spacing: -.035em; }
 .welcomeState > p:not(.eyebrow) { margin: 0 0 25px; color: var(--muted); }
 .welcomeState > button, .authCard > button, .editorActions button, .dialogActions button { padding: .72rem 1rem; border-radius: 8px; color: #fff; background: var(--accent); font-weight: 750; }
+.libraryHome { margin-bottom: 5px; font-weight: 750; }
 .reader { width: min(100% - 60px, 850px); min-height: 100%; margin: 0 auto; padding: clamp(90px, 12vh, 145px) 0 100px; }
 .reader > h1 { margin: 0 0 clamp(40px, 7vh, 76px); padding-bottom: 30px; border-bottom: 1px solid var(--line); font: 700 clamp(2.5rem, 5vw, 5rem)/1.03 Georgia, serif; letter-spacing: -.04em; text-wrap: balance; }
 .readerContent { font: 1.14rem/1.86 Georgia, serif; overflow-wrap: anywhere; }

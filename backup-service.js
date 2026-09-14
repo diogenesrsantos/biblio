@@ -12,6 +12,16 @@ function backupName() {
 }
 
 async function createBackup(dataDir) {
+  const output = path.join(os.tmpdir(), `biblio-backup-${crypto.randomUUID()}.zip`);
+  try {
+    await createBackupFile(dataDir, output);
+    return fs.readFileSync(output);
+  } finally {
+    fs.rmSync(output, { force: true });
+  }
+}
+
+async function createBackupFile(dataDir, output) {
   const database = path.join(dataDir, 'biblio.db');
   if (!fs.existsSync(database)) throw new Error('Banco de dados não encontrado.');
   const snapshot = path.join(os.tmpdir(), `biblio-snapshot-${crypto.randomUUID()}.db`);
@@ -27,11 +37,12 @@ async function createBackup(dataDir) {
     const mediaDir = path.join(dataDir, 'media');
     if (fs.existsSync(mediaDir)) zip.addLocalFolder(mediaDir, 'data/media');
     zip.addFile('LEIA-ME.txt', Buffer.from('Backup da Biblio. Instale a Biblio em outro computador e use a opção Restaurar cópia.\n'));
-    return zip.toBuffer();
+    zip.writeZip(output);
+    return output;
   } finally {
     source.close();
     fs.rmSync(snapshot, { force: true });
   }
 }
 
-module.exports = { backupName, createBackup };
+module.exports = { backupName, createBackup, createBackupFile };

@@ -1,6 +1,6 @@
 # Registro consolidado do projeto Biblio
 
-Atualizado em 9 de setembro de 2026.
+Atualizado em 14 de setembro de 2026.
 
 Este documento concentra o estado técnico, as decisões de arquitetura, os procedimentos de operação e as pendências conhecidas da Biblio. Não devem ser registrados aqui senhas, chaves, cookies, URLs com credenciais ou dados pessoais do acervo.
 
@@ -20,11 +20,11 @@ O público esperado é de uma a três pessoas. A aplicação prioriza simplicida
 
 - Repositório: `https://github.com/diogenesrsantos/biblio`
 - Branch principal histórica: `master` (ainda não contém a linha SQLite recente)
-- Linha funcional atual: `feat/editor-tables-columns` em `8fe3c25`
-- Tag mais recente: `v0.1.9` (`f0abf1d`)
-- Próxima tag de compilação: `v0.1.10`
-- Estado de produção: código de `8fe3c25` publicado diretamente na VPS; a próxima release ainda não foi criada
-- Versão declarada no `package.json`: `0.1.10`
+- Linha funcional atual: `feat/editor-tables-columns`, após a tag `v0.1.10`
+- Tag mais recente no repositório local: `v0.1.10` (`9a560ff`)
+- Próxima versão em desenvolvimento: `0.1.11`
+- Estado de produção documentado: código de `8fe3c25` publicado diretamente na VPS; confirmar o estado externo antes de nova publicação
+- Versão declarada no `package.json`: `0.1.11`
 - Runtime: Node.js 22
 - Banco padrão da versão atual: SQLite
 - Interface: HTML, CSS e JavaScript, instalável como PWA
@@ -79,7 +79,7 @@ Tabelas criadas automaticamente na inicialização:
 - `users`: conta e hash de senha;
 - `sessions`: sessões autenticadas com expiração;
 - `themes`: temas do acervo, com subtemas em um nível por meio de `parent_id`;
-- `articles`: artigos, cor do título, resumo, conteúdo, idioma, data e tema;
+- `articles`: artigos e a página inicial editável, com cor do título, resumo, conteúdo, idioma, data e tema;
 - `authors`: autores;
 - `article_authors`: relação entre artigos e autores;
 - `tags`: etiquetas;
@@ -98,11 +98,14 @@ Os temas iniciais são Teologia, Filosofia, Culinária e Pensamentos.
 - Senha com pelo menos 12 caracteres.
 - Hash de senha com `scrypt`, salt aleatório e comparação segura.
 - Sessões aleatórias com duração de 30 dias.
+- Limitação de tentativas de login por origem e usuário.
 - Cookie `HttpOnly`, `SameSite=Strict` e `Secure` quando `PUBLIC_HTTPS=true`.
+- Validação de origem nas operações mutáveis e cabeçalhos CSP, anti-frame, `nosniff`, referência e permissões.
 - API e mídias protegidas por autenticação, exceto `/api/health`.
 - Conteúdo HTML sanitizado no servidor.
 - Links externos recebem `noopener noreferrer`.
 - Mídias servidas com `X-Content-Type-Options: nosniff`.
+- Assinatura binária de imagens e vídeos conferida antes do armazenamento.
 - Servidor SQLite atual escuta somente em `127.0.0.1`.
 - Arquivo de restauração pendente criado com modo `0600`.
 
@@ -125,6 +128,7 @@ Em VPS, Nginx e HTTPS são obrigatórios para acesso externo. As portas internas
 | Método e rota | Uso |
 |---|---|
 | `GET /api/health` | Saúde da aplicação e banco ativo |
+| `GET /api/diagnostics` | Integridade do SQLite e consistência entre registros e mídias |
 | `GET /api/auth/status` | Estado de autenticação e configuração inicial |
 | `POST /api/auth/setup` | Cria a primeira conta |
 | `POST /api/auth/login` | Inicia sessão |
@@ -162,6 +166,7 @@ O cache atual é identificado como `biblio-shell-v35`.
 - A biblioteca lateral esquerda é exibida por padrão e pode ser recolhida para ampliar a leitura.
 - Temas do acervo podem conter subtemas. Um clique no tema principal expande ou recolhe os subtemas; o botão `＋` ao lado dele cria um subtema.
 - O documento aberto mostra somente título e conteúdo; os demais metadados ficam em uma janela translúcida própria.
+- A biblioteca possui uma página inicial global, criada automaticamente com conteúdo básico, aberta após o login e editável pelo mesmo editor visual dos artigos. Ela não aparece nos temas nem nos resultados de pesquisa e não pode ser excluída.
 - Edição e criação usam um editor sobreposto à interface, com fundo desfocado e barra de ferramentas fixa.
 - O editor permite aplicar tamanho e cor ao texto, além das opções de formatação anteriores.
 - O editor permite alterar a entrelinha dos parágrafos entre compacta, normal, confortável e ampla.
@@ -198,9 +203,9 @@ data/media/*
 
 O manifesto registra formato, versão do formato, versão da aplicação e data de criação.
 
-O banco é copiado pela API de backup do SQLite, produzindo uma imagem consistente mesmo quando o WAL está ativo.
+O banco é copiado pela API de backup do SQLite, produzindo uma imagem consistente mesmo quando o WAL está ativo. O download é entregue por streaming a partir de um arquivo temporário.
 
-Antes de restaurar, a aplicação valida o manifesto e a presença do banco. A pasta anterior é preservada com um nome semelhante a:
+Antes de restaurar, a aplicação recebe o ZIP por streaming, valida manifesto, limites de expansão e integridade do SQLite. A pasta anterior é preservada com um nome semelhante a:
 
 ```text
 data.antes-da-restauracao-AAAA-MM-DDTHH-MM-SS
@@ -264,7 +269,7 @@ Os dados desktop ficam na subpasta `data` do diretório de dados do usuário for
 
 O workflow gera os instaladores Windows e Linux, publica-os como artifacts e, em tags `v*`, tenta criar a GitHub Release com esses arquivos. A configuração atual usa `gh release create` com o token do GitHub Actions.
 
-Na tag `v0.1.9`, os jobs Windows e Linux concluíram com sucesso, mas o job `release` falhou e nenhuma página de Release foi criada. Antes da próxima tag, corrigir e testar esse job, incluindo as permissões efetivas de escrita do `GITHUB_TOKEN`. O aviso do runner sobre Node 20 vem de `actions/download-artifact@v5`; atualizar essa action para a versão atual compatível com Node 24 elimina o aviso, sem exigir migração do runtime da aplicação, que permanece em Node 22.
+Na tag `v0.1.9`, os jobs Windows e Linux concluíram, mas o job `release` falhou. O workflow foi atualizado para executar testes antes dos builds, usar as versões Node 24 das actions de artefatos e publicar de forma idempotente com `gh release upload --clobber`. A correção precisa ser confirmada na próxima tag; o runtime da aplicação permanece em Node 22.
 
 ## 14. Histórico relevante
 
@@ -326,12 +331,11 @@ Nunca sincronizar `data/` para atualizar o código. Após o último `npm ci`, o 
 
 ## 17. Pendências conhecidas
 
-1. Corrigir o job `release` da tag `v0.1.9` e atualizar `actions/download-artifact` para uma versão que use Node 24.
-2. Adicionar ícones próprios nos instaladores Electron; atualmente o empacotador pode usar o ícone padrão.
-3. Criar testes automatizados para API, banco, backup e restauração.
-4. Modularizar `server.js`, que ainda concentra muitas responsabilidades.
-5. Considerar streaming para backups grandes; atualmente o ZIP é montado em memória.
-6. Considerar upload de restauração por streaming; atualmente o ZIP usa Base64 e memória.
+1. Confirmar o workflow corrigido em uma nova tag, incluindo instaladores e página da GitHub Release.
+2. Ampliar os testes de interface em navegador e validar os instaladores em sistemas limpos.
+3. Continuar a modularização das rotas do `server.js` e dos recursos do `public/app.js`.
+4. O formato ZIP ainda é montado internamente pela biblioteca antes de ser gravado; para acervos muito grandes, considerar um gerador ZIP totalmente incremental.
+5. Imagens de personalização do cabeçalho continuam armazenadas no SQLite como Data URL; migrá-las para arquivos se o tamanho ou a quantidade crescer.
 
 ## 18. Regras para evolução segura
 
@@ -344,8 +348,7 @@ Nunca sincronizar `data/` para atualizar o código. Após o último `npm ci`, o 
 
 ## 19. Próxima sequência recomendada
 
-1. Abrir ou integrar a branch `feat/editor-tables-columns` e preparar a próxima versão, sem reutilizar a tag `v0.1.9`.
-2. Corrigir o job de release e validar uma tag completa, com installers e página GitHub Release.
-3. Criar testes automatizados para sanitização de tabelas/colunas/justificação, API, banco, backup e restauração.
-4. Criar backup externo da VPS e testar uma restauração completa.
-5. Só então declarar a próxima versão estável.
+1. Revisar as mudanças da versão `0.1.11` e executar `npm test`, auditoria e build dos instaladores.
+2. Criar backup externo da VPS e testar uma restauração completa em ambiente separado.
+3. Criar a tag somente após validar migração de um banco real copiado e instalação limpa.
+4. Confirmar installers e página da GitHub Release produzidos pelo workflow.

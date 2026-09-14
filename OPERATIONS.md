@@ -16,7 +16,7 @@ npm install
 npm start
 ```
 
-A interface fica disponível em `http://127.0.0.1:8080`. Para abrir o navegador automaticamente, use `npm run open`; durante o desenvolvimento, use `npm run dev`.
+A interface fica disponível em `http://127.0.0.1:8080`. Para abrir o navegador automaticamente, use `npm run open`; durante o desenvolvimento, use `npm run dev`. Execute `npm test` antes de publicar alterações.
 
 ## Dados, backup e restauração
 
@@ -33,6 +33,20 @@ npm run restore -- /caminho/para/biblio-backup.zip
 ```
 
 A restauração também está disponível na interface autenticada. A pasta de dados anterior é preservada como `data.antes-da-restauracao-...`; só a remova depois de validar os artigos e mídias restaurados.
+
+## Diagnóstico
+
+Com a aplicação aberta e uma sessão autenticada, `GET /api/diagnostics` executa `PRAGMA integrity_check` e compara os anexos registrados com os arquivos presentes em `data/media/`. O diagnóstico não remove arquivos automaticamente.
+
+Antes de publicar uma versão, execute:
+
+```bash
+npm test
+npm audit
+node --check server.js
+node --check public/app.js
+git diff --check
+```
 
 ## Redefinição de senha
 

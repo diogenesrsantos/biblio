@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { backupName, createBackup } = require('../backup-service');
+const { backupName, createBackupFile } = require('../backup-service');
 
 const destination = process.argv[2];
 if (!destination) {
@@ -14,7 +14,8 @@ const target = path.resolve(destination, backupName());
 async function main() {
 try {
   fs.mkdirSync(path.dirname(target), { recursive: true });
-  fs.writeFileSync(target, await createBackup(data), { flag: 'wx' });
+  if (fs.existsSync(target)) throw new Error('O arquivo de destino já existe.');
+  await createBackupFile(data, target);
   console.log('Backup concluído em: ' + target);
 } catch (error) { console.error(error.message); process.exitCode = 1; }
 }
