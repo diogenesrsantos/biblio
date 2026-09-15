@@ -33,6 +33,10 @@ test('API cobre autenticação, artigos, segurança e diagnóstico', async t => 
   assert.equal(setup.status, 201);
   const cookie = setup.headers.get('set-cookie').split(';')[0];
   const headers = { 'content-type': 'application/json', cookie, origin };
+  const appearancePng = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(24)]);
+  const appearanceUpload = await fetch(origin + '/api/settings/images/banner', { method: 'POST', headers: { ...headers, 'content-type': 'application/octet-stream', 'x-mime-type': 'image/png' }, body: appearancePng });
+  assert.equal(appearanceUpload.status, 200);
+  assert.match((await fetch(origin + '/api/settings', { headers }).then(response => response.json())).banner_image, /^data:image\/png;base64,/);
   const bible = await fetch(origin + '/api/bible', { headers }).then(response => response.json());
   assert.equal(bible.books.length, 66);
   assert.equal(bible.books.filter(book => book.testament === 'old').length, 39);
@@ -49,8 +53,11 @@ test('API cobre autenticação, artigos, segurança e diagnóstico', async t => 
   assert.equal(updatedHome.theme, null);
   assert.equal((await fetch(origin + '/api/articles/' + home.id, { method: 'DELETE', headers })).status, 400);
   const themes = await fetch(origin + '/api/themes', { headers }).then(response => response.json());
-  const article = await fetch(origin + '/api/articles', { method: 'POST', headers, body: JSON.stringify({ title: 'Artigo', theme_id: themes[0].id, content: '<script>não</script><p style="text-align:justify">Sim</p>', authors: 'Autora', tags: 'Teste' }) }).then(response => response.json());
+  const article = await fetch(origin + '/api/articles', { method: 'POST', headers, body: JSON.stringify({ title: 'Artigo', theme_id: themes[0].id, title_size: 2.5, title_margin_top: 12, title_margin_bottom: 24, content: '<script>não</script><p style="text-align:justify">Sim</p>', authors: 'Autora', tags: 'Teste' }) }).then(response => response.json());
   assert.equal(article.title, 'Artigo');
+  assert.equal(article.title_size, 2.5);
+  assert.equal(article.title_margin_top, 12);
+  assert.equal(article.title_margin_bottom, 24);
   assert.doesNotMatch(article.content, /script/);
   assert.match(article.content, /text-align:justify/);
 

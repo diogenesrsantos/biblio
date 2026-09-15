@@ -26,6 +26,11 @@ let selectedBibleBook = null;
 let selectedBibleChapter = null;
 const expandedBibleTestaments = new Set();
 const visualThemes = ['classic', 'ocean', 'sepia', 'rose', 'lavender', 'slate'];
+const titleAlignControl = document.createElement('label');
+titleAlignControl.className = 'titleAlignControl';
+titleAlignControl.title = 'Alinhamento do título';
+titleAlignControl.innerHTML = '<span>Alinhamento</span><select id="titleAlign" name="title_align" aria-label="Alinhamento do título"><option value="left">Esquerda</option><option value="center">Centro</option><option value="right">Direita</option></select>';
+document.querySelector('.titleColorControl')?.before(titleAlignControl);
 
 function storedVisualTheme() {
   try { return localStorage.getItem('biblio_visual_theme'); } catch { return null; }
@@ -37,6 +42,14 @@ function applyVisualTheme(theme, remember = true) {
   document.querySelectorAll('.visualThemeChoices [data-visual-theme]').forEach(button => button.classList.toggle('active', button.dataset.visualTheme === selected));
   if (remember) { try { localStorage.setItem('biblio_visual_theme', selected); } catch {} }
   return selected;
+}
+
+function applyTitleStyle(element, article = {}) {
+  element.style.color = article.title_color || '#253229';
+  element.style.textAlign = article.title_align || 'left';
+  element.style.fontSize = `${Number(article.title_size) || 3.5}rem`;
+  element.style.marginTop = `${Number(article.title_margin_top) || 0}px`;
+  element.style.marginBottom = `${Number(article.title_margin_bottom ?? 40)}px`;
 }
 
 async function loadInitialVisualTheme() {
@@ -283,7 +296,7 @@ async function loadBibleChapter(code, chapter, verse = null) {
     const data = await api(`/api/bible/books/${code}/chapters/${chapter}`);
     selectedBibleBook = bibleData.books.find(book => book.code === code);
     selectedBibleChapter = chapter;
-    const verses = data.verses.map(item => `<span id="bible-verse-${escapeHtml(item.verse)}" class="bibleVerse${String(item.verse) === String(verse) ? ' highlight' : ''}"><sup class="bibleVerseNumber">${escapeHtml(item.verse)}</sup>${escapeHtml(item.text)} </span>`).join('');
+    const verses = data.verses.map(item => `<p id="bible-verse-${escapeHtml(item.verse)}" class="bibleVerse${String(item.verse) === String(verse) ? ' highlight' : ''}"><sup class="bibleVerseNumber">${escapeHtml(item.verse)}</sup>${escapeHtml(item.text)}</p>`).join('');
     showBibleReader(`${data.book.name} ${chapter}`, `<div class="bibleVerses">${verses}</div>`, { navigation: true });
     $('#biblePosition').textContent = `${data.book.name} ${chapter}`;
     $('#bibleLicense').innerHTML = bibleLicenseHtml();
@@ -352,7 +365,7 @@ function renderReader() {
   $('#allThemes').classList.toggle('active', selectedTheme === null && !isLibraryHome);
   if (!hasArticle) return;
   $('#readerTitle').textContent = currentArticle.title;
-  $('#readerTitle').style.color = currentArticle.title_color || '#253229';
+  applyTitleStyle($('#readerTitle'), currentArticle);
   $('#readerContent').innerHTML = currentArticle.content || '<p class="muted">Este artigo ainda não possui conteúdo.</p>';
   $('#reader').scrollIntoView({ block: 'start' });
 }
@@ -378,10 +391,10 @@ function navigateThemeArticle(index) {
 function printCurrentArticle() {
   if (!currentArticle) return;
   $('#printPreviewTitle').textContent = currentArticle.title;
-  $('#printPreviewTitle').style.color = currentArticle.title_color || '#253229';
+  applyTitleStyle($('#printPreviewTitle'), currentArticle);
   $('#printPreviewContent').innerHTML = currentArticle.content || '<p>Este artigo ainda não possui conteúdo.</p>';
   $('#printDocumentTitle').textContent = currentArticle.title;
-  $('#printDocumentTitle').style.color = currentArticle.title_color || '#253229';
+  applyTitleStyle($('#printDocumentTitle'), currentArticle);
   $('#printDocumentContent').innerHTML = currentArticle.content || '<p>Este artigo ainda não possui conteúdo.</p>';
   $('#printDialog').showModal();
 }
@@ -473,7 +486,12 @@ function fillEditor(article) {
   $('#status').textContent = isLibraryHome ? 'EDITANDO PÁGINA INICIAL' : 'EDITANDO ARTIGO';
   ['title', 'summary', 'written_date', 'language'].forEach(key => $('#' + key).value = article[key] || '');
   $('#titleColor').value = article.title_color || '#253229';
+  $('#titleAlign').value = article.title_align || 'left';
+  $('#titleSize').value = String(article.title_size || 3.5);
+  $('#titleMarginTop').value = String(article.title_margin_top ?? 0);
+  $('#titleMarginBottom').value = String(article.title_margin_bottom ?? 40);
   $('#title').style.color = $('#titleColor').value;
+  $('#title').style.fontSize = `${Number($('#titleSize').value)}rem`;
   $('#theme_id').value = article.theme?.id || '';
   $('#theme_id').required = !isLibraryHome;
   $('#articleMetadataFields').hidden = isLibraryHome;
@@ -509,7 +527,12 @@ function fresh(options = {}) {
   $('#isThemeHome').checked = Boolean(options.isThemeHome);
   updateThemeHomeControl();
   $('#titleColor').value = '#253229';
+  $('#titleAlign').value = 'left';
+  $('#titleSize').value = '3.5';
+  $('#titleMarginTop').value = '0';
+  $('#titleMarginBottom').value = '40';
   $('#title').style.color = '#253229';
+  $('#title').style.fontSize = '3.5rem';
   $('#status').textContent = 'NOVO ARTIGO';
   $('#remove').hidden = true;
   renderAttachments();
@@ -987,6 +1010,13 @@ function readFile(file) {
   return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); });
 }
 
+function appearanceError(message = '') {
+  const element = $('#appearanceError');
+  if (!element) return;
+  element.textContent = message;
+  element.hidden = !message;
+}
+
 function imageDimensions(file) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
@@ -1008,6 +1038,10 @@ async function validateAppearanceImage(file, type) {
   if (type === 'welcome' && (width < 800 || height < 1200 || ratio < .62 || ratio > .72)) {
     throw new Error(`A imagem do popup tem ${width} × ${height} px. Use proporção vertical 2:3 e no mínimo 800 × 1200 px.`);
   }
+}
+
+async function uploadAppearanceImage(file, type) {
+  return api('/api/settings/images/' + type, { method: 'POST', headers: { 'content-type': 'application/octet-stream', 'x-mime-type': file.type }, body: file });
 }
 
 async function uploadFile(file) {
@@ -1291,6 +1325,7 @@ $('#bibleAbout').onclick = async () => { await loadBibleIndex(false); showBibleA
 $('#allThemes').onclick = () => selectTheme(null);
 $('#searchButton').onclick = renderList;
 $('#titleColor').oninput = event => { $('#title').style.color = event.target.value; };
+$('#titleSize').onchange = event => { $('#title').style.fontSize = `${Number(event.target.value)}rem`; };
 $('#theme_id').onchange = updateThemeHomeControl;
 $('#search').oninput = () => { if ($('#search').value.trim()) selectedTheme = null; clearTimeout(window.searchDelay); window.searchDelay = setTimeout(() => { loadThemes(); renderList(); }, 220); };
 $('#addTheme').onclick = async () => {
@@ -1319,14 +1354,18 @@ $('#articleForm').onsubmit = async event => {
 $('#remove').onclick = async () => {
   if (!editingId || !confirm('Excluir este artigo? Esta ação não pode ser desfeita.')) return;
   try {
+    const removedCurrentArticle = currentArticle?.id === editingId;
     await api('/api/articles/' + editingId, { method: 'DELETE' });
-    if (currentArticle?.id === editingId) currentArticle = null;
+    if (removedCurrentArticle) currentArticle = null;
     editingId = null;
     editorAttachments = [];
     $('#editorDialog').close();
     toggleMedia(false);
-    renderReader();
-    renderMedia();
+    if (removedCurrentArticle) await loadLibraryHome();
+    else {
+      renderReader();
+      renderMedia();
+    }
     await Promise.all([renderList(), loadThemes()]);
     toast('Artigo excluído.');
   } catch (error) { toast(error.message); }
@@ -1337,6 +1376,8 @@ $('#customizeBanner').onclick = () => {
   $('#customSubtitle').value = bannerSettings.banner_subtitle || '';
   $('#customImage').value = '';
   $('#customWelcomeImage').value = '';
+  $('#customImageName').textContent = 'Nenhum arquivo selecionado.';
+  $('#customWelcomeImageName').textContent = 'Nenhum arquivo selecionado.';
   $('#removeBannerImage').checked = false;
   $('#removeWelcomeImage').checked = false;
   $('#customBannerPreview').src = bannerSettings.banner_image || '/brand/reverendo-albert-banner.png';
@@ -1346,6 +1387,7 @@ $('#customizeBanner').onclick = () => {
   $('#accountNewPassword').value = '';
   $('#accountConfirmPassword').value = '';
   $('#customizeDialog').showModal();
+  appearanceError();
 };
 
 $('#saveAccount').onclick = async () => {
@@ -1368,21 +1410,24 @@ $('#saveAccount').onclick = async () => {
 $('#customImage').onchange = async event => {
   const file = event.target.files[0];
   if (!file) return;
+  $('#customImageName').textContent = file.name;
   try { await validateAppearanceImage(file, 'banner'); $('#customBannerPreview').src = await readFile(file); $('#removeBannerImage').checked = false; }
-  catch (error) { event.target.value = ''; toast(error.message); }
+  catch (error) { appearanceError(error.message); }
 };
 
 $('#customWelcomeImage').onchange = async event => {
   const file = event.target.files[0];
   if (!file) return;
+  $('#customWelcomeImageName').textContent = file.name;
   try { await validateAppearanceImage(file, 'welcome'); $('#customWelcomePreview').src = await readFile(file); $('#removeWelcomeImage').checked = false; }
-  catch (error) { event.target.value = ''; toast(error.message); }
+  catch (error) { appearanceError(error.message); }
 };
 $('#removeBannerImage').onchange = event => { if (event.target.checked) $('#customBannerPreview').src = '/brand/reverendo-albert-banner.png'; };
 $('#removeWelcomeImage').onchange = event => { if (event.target.checked) $('#customWelcomePreview').src = '/brand/reverendo-albert-boas-vindas.png'; };
 
 $('#customizeForm').onsubmit = async event => {
   event.preventDefault();
+  appearanceError();
   try {
     const bannerFile = $('#customImage').files[0];
     const welcomeFile = $('#customWelcomeImage').files[0];
@@ -1390,14 +1435,14 @@ $('#customizeForm').onsubmit = async event => {
     await validateAppearanceImage(welcomeFile, 'welcome');
     const payload = { banner_title: $('#customTitle').value.trim(), banner_subtitle: $('#customSubtitle').value.trim() };
     if ($('#removeBannerImage').checked) payload.banner_image = '';
-    else if (bannerFile) payload.banner_image = await readFile(bannerFile);
+    else if (bannerFile) await uploadAppearanceImage(bannerFile, 'banner');
     if ($('#removeWelcomeImage').checked) payload.welcome_image = '';
-    else if (welcomeFile) payload.welcome_image = await readFile(welcomeFile);
+    else if (welcomeFile) await uploadAppearanceImage(welcomeFile, 'welcome');
     await api('/api/settings', { method: 'PUT', body: JSON.stringify(payload) });
     await loadSettings();
     $('#customizeDialog').close();
     toast('Cabeçalho personalizado.');
-  } catch (error) { toast(error.message); }
+  } catch (error) { appearanceError(error.message); }
 };
 
 $('#readerContent').onclick = event => {
