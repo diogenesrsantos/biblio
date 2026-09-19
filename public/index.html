@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#263229">
   <meta name="description" content="Biblioteca pessoal de artigos e referências.">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/style.css?v=bible-v4">
+  <link rel="stylesheet" href="/style.css?v=highlights-v1">
   <title>Biblio</title>
 </head>
 <body>
@@ -59,7 +59,16 @@
         <div id="bibleOldBooks" class="bibleBooks" hidden></div>
         <button class="bibleTestament" data-bible-testament="new" type="button" aria-expanded="false"><span>Novo Testamento</span><span>27</span></button>
         <div id="bibleNewBooks" class="bibleBooks" hidden></div>
+        <button id="bibleHighlights" class="bibleHighlightsButton" type="button"><span>▰ Minhas marcações</span><span id="bibleHighlightsCount">0</span></button>
         <button id="bibleAbout" class="bibleAbout" type="button">Sobre esta tradução</button>
+      </div>
+      <div class="sectionHeading hebrewSectionHeading"><p class="eyebrow">IDIOMAS BÍBLICOS</p></div>
+      <button id="hebrewToggle" class="theme hebrewToggle" type="button" aria-expanded="false"><span><b lang="he" dir="rtl">א</b> Hebraico Bíblico</span><span class="themeCount">7.597</span></button>
+      <div id="hebrewPanel" class="biblePanel hebrewPanel" hidden>
+        <label class="bibleSearchBox hebrewSearchBox"><input id="hebrewSearch" placeholder="paz, שָׁלוֹם, shalom ou H7965" aria-label="Pesquisar no dicionário de hebraico"><button id="hebrewSearchButton" type="button" aria-label="Pesquisar no dicionário">⌕</button></label>
+        <p class="hebrewSearchHint">Pesquise por português, hebraico, transliteração ou código Strong.</p>
+        <div class="hebrewExamples"><button type="button" data-hebrew-example="amor">amor</button><button type="button" data-hebrew-example="shalom">shalom</button><button type="button" data-hebrew-example="H0430">H0430</button></div>
+        <button id="hebrewAbout" class="bibleAbout" type="button">Sobre o dicionário e a licença</button>
       </div>
       <div class="sectionHeading resultsHeading"><p class="eyebrow">RESULTADOS</p><p id="count" class="muted"></p></div>
       <div id="articleList" class="articleList"></div>
@@ -84,7 +93,7 @@
       <section id="welcome" class="welcomeState" hidden><div class="welcomeMark" aria-hidden="true">B</div><p class="eyebrow">SUA BIBLIOTECA</p><h1>Carregando página inicial…</h1></section>
       <article id="reader" class="reader" hidden><h1 id="readerTitle"></h1><div id="readerContent" class="readerContent"></div></article>
       <article id="bibleReader" class="bibleReader" hidden>
-        <header class="bibleReaderHeader"><div><p class="eyebrow">BÍBLIA SAGRADA · BLIVRE</p><h1 id="bibleReaderTitle">Bíblia Livre</h1></div><nav id="bibleChapterNav" class="bibleChapterNav" aria-label="Navegação dos capítulos" hidden><button id="biblePrevious" type="button" aria-label="Capítulo anterior">‹</button><span id="biblePosition"></span><button id="bibleNext" type="button" aria-label="Próximo capítulo">›</button></nav></header>
+        <header class="bibleReaderHeader"><div><p id="bibleReaderEyebrow" class="eyebrow">BÍBLIA SAGRADA · BLIVRE</p><h1 id="bibleReaderTitle">Bíblia Livre</h1></div><nav id="bibleChapterNav" class="bibleChapterNav" aria-label="Navegação dos capítulos" hidden><button id="biblePrevious" type="button" aria-label="Capítulo anterior">‹</button><span id="biblePosition"></span><button id="bibleNext" type="button" aria-label="Próximo capítulo">›</button></nav></header>
         <div id="bibleReaderContent" class="bibleReaderContent"></div>
         <footer id="bibleLicense" class="bibleLicense"></footer>
       </article>
@@ -140,7 +149,7 @@
       <section class="customSection">
         <div class="customSectionHeading"><div><p class="eyebrow">BOAS-VINDAS</p><h3>Imagem do popup</h3></div><img id="customWelcomePreview" class="customWelcomePreview" alt="Prévia da imagem atual do popup"></div>
         <label>Imagem de boas-vindas<input id="customWelcomeImage" type="file" accept="image/jpeg,image/png,image/gif,image/webp"><small id="customWelcomeImageName" class="fileSelection">Nenhum arquivo selecionado.</small></label>
-        <p class="imageRequirement"><strong>Formato recomendado:</strong> 1200 × 1800 px, proporção vertical 2:3, mínimo de 800 × 1200 px. A pessoa ou elemento principal deve ficar dentro das margens centrais.</p>
+        <p class="imageRequirement"><strong>Formato recomendado:</strong> 1200 × 1800 px, proporção vertical 2:3, com tolerância de 20%, e mínimo tolerado de 640 × 960 px. A pessoa ou elemento principal deve ficar dentro das margens centrais.</p>
         <label class="checkLabel"><input id="removeWelcomeImage" type="checkbox"> Usar novamente a imagem padrão</label>
       </section>
       <section class="customSection accountSection">
@@ -165,8 +174,18 @@
     <div class="dialogActions"><button id="cancelBackup" class="secondaryButton" type="button">Cancelar</button><button id="startBackup" type="button" disabled>Iniciar backup</button></div>
   </dialog>
 
+  <dialog id="bibleHighlightDialog" class="glassDialog bibleHighlightDialog">
+    <form id="bibleHighlightForm">
+      <div class="dialogHeading"><div><p class="eyebrow">MARCA-TEXTO</p><h2 id="bibleHighlightReference">Marcar versículo</h2></div><button class="closeDialog iconButton" type="button" aria-label="Fechar">×</button></div>
+      <p id="bibleHighlightExcerpt" class="bibleHighlightExcerpt"></p>
+      <fieldset class="highlightColors"><legend>Cor</legend><label><input type="radio" name="highlight_color" value="yellow" checked><span class="highlightSwatch yellow" title="Amarelo"></span></label><label><input type="radio" name="highlight_color" value="green"><span class="highlightSwatch green" title="Verde"></span></label><label><input type="radio" name="highlight_color" value="blue"><span class="highlightSwatch blue" title="Azul"></span></label><label><input type="radio" name="highlight_color" value="pink"><span class="highlightSwatch pink" title="Rosa"></span></label><label><input type="radio" name="highlight_color" value="orange"><span class="highlightSwatch orange" title="Laranja"></span></label></fieldset>
+      <label class="field"><span>Nota opcional</span><textarea id="bibleHighlightNote" maxlength="2000" rows="4" placeholder="Registre uma observação sobre este versículo"></textarea></label>
+      <div class="dialogActions"><button id="removeBibleHighlight" class="dangerButton" type="button" hidden>Remover marcação</button><button class="secondaryButton closeDialog" type="button">Cancelar</button><button type="submit">Salvar marcação</button></div>
+    </form>
+  </dialog>
+
   <div id="welcomePopup" class="welcomePopup" role="dialog" aria-modal="true" aria-label="Boas-vindas à biblioteca" hidden><button id="welcomeArtwork" class="welcomeArtwork" type="button" aria-label="Entrar na biblioteca"><img src="/brand/reverendo-albert-boas-vindas.png" alt="Reverendo Albert em composição cristã com Bíblia, cruz e luz celestial"><span>Clique na imagem para entrar</span></button></div>
   <div id="imageModal" class="imageModal" hidden><button id="closeImage" type="button" class="closeImage" aria-label="Fechar imagem">×</button><button id="previousImage" type="button" class="imageArrow imagePrevious" aria-label="Imagem anterior">‹</button><figure><img alt=""><figcaption id="imageCaption"></figcaption></figure><button id="nextImage" type="button" class="imageArrow imageNext" aria-label="Próxima imagem">›</button></div>
-  <div id="toast" role="status" aria-live="polite"></div><script src="/api.js?v=bible-v4"></script><script src="/app.js?v=bible-v4"></script>
+  <div id="toast" role="status" aria-live="polite"></div><script src="/api.js?v=highlights-v1"></script><script src="/app.js?v=highlights-v1"></script>
 </body>
 </html>

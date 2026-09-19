@@ -1,6 +1,6 @@
 # Registro consolidado do projeto Biblio
 
-Atualizado em 14 de setembro de 2026.
+Atualizado em 19 de setembro de 2026.
 
 Este documento concentra o estado técnico, as decisões de arquitetura, os procedimentos de operação e as pendências conhecidas da Biblio. Não devem ser registrados aqui senhas, chaves, cookies, URLs com credenciais ou dados pessoais do acervo.
 
@@ -14,6 +14,7 @@ A Biblio é uma biblioteca particular para registrar e consultar:
 - imagens e vídeos anexados;
 - imagens inseridas dentro do conteúdo dos artigos.
 - leitura e pesquisa offline da Bíblia Livre 2018, separada do acervo de artigos.
+- consulta offline de hebraico bíblico em português, com códigos Strong e referências de ocorrência.
 
 O público esperado é de uma a três pessoas. A aplicação prioriza simplicidade, portabilidade dos dados e operação local ou em uma única VPS.
 
@@ -21,7 +22,7 @@ O público esperado é de uma a três pessoas. A aplicação prioriza simplicida
 
 - Repositório: `https://github.com/diogenesrsantos/biblio`
 - Branch principal histórica: `master` (ainda não contém a linha SQLite recente)
-- Linha funcional atual: `feat/editor-tables-columns`, após a tag `v0.1.10`
+- Linha funcional atual: `feat/biblia-sagrada`, após a tag `v0.1.10`
 - Tag mais recente no repositório local: `v0.1.10` (`9a560ff`)
 - Próxima versão em desenvolvimento: `0.1.12`
 - Estado de produção documentado: código de `8fe3c25` publicado diretamente na VPS; confirmar o estado externo antes de nova publicação
@@ -70,6 +71,8 @@ Não executar múltiplas instâncias da versão SQLite apontando para o mesmo ar
 | `scripts/backup.js` | Backup pelo terminal |
 | `scripts/restore.js` | Restauração pelo terminal |
 | `scripts/reset-password.js` | Redefinição interativa de senha |
+| `lib/hebrew.js` | Importação, normalização, transliteração e referências do léxico hebraico |
+| `scripts/build-hebrew.js` | Geração reproduzível do dicionário SQLite offline |
 | `.github/workflows/build-installers.yml` | Geração de instaladores Windows e Linux |
 | `data/` | Banco e mídias no desenvolvimento local |
 
@@ -96,6 +99,13 @@ O módulo bíblico usa outro banco, `resources/bible/bible.sqlite`, aberto somen
 - `bible_books`: 66 livros e sua divisão entre Velho e Novo Testamento;
 - `bible_verses`: capítulos e 31.102 versículos;
 - `bible_verses_fts`: índice FTS5 usado exclusivamente pela pesquisa bíblica.
+
+O módulo de hebraico bíblico usa `resources/hebrew/hebrew.sqlite`, também somente para leitura:
+
+- `hebrew_sources`: procedência, versão e licença do conteúdo;
+- `hebrew_entries`: 7.597 lemas, formas normalizadas, transliteração auxiliar e códigos Strong;
+- `hebrew_senses`: 15.272 sentidos, com glossas, definições, gramática, domínio semântico e referências;
+- `hebrew_entries_fts`: índice FTS5 para pesquisa em hebraico, português, transliteração e Strong.
 
 Os temas iniciais são Teologia, Filosofia, Culinária e Pensamentos.
 
@@ -140,6 +150,9 @@ Em VPS, Nginx e HTTPS são obrigatórios para acesso externo. As portas internas
 | `GET /api/bible` | Tradução e índice dos 66 livros bíblicos |
 | `GET /api/bible/books/:code/chapters/:chapter` | Lê um capítulo bíblico |
 | `GET /api/bible/search?q=...` | Pesquisa exclusiva nos versículos |
+| `GET /api/hebrew` | Metadados, licença e dimensão do dicionário offline |
+| `GET /api/hebrew/search?q=...` | Pesquisa verbetes por português, hebraico, transliteração ou Strong |
+| `GET /api/hebrew/entries/:id` | Abre sentidos e referências de um verbete hebraico |
 | `GET /api/auth/status` | Estado de autenticação e configuração inicial |
 | `POST /api/auth/setup` | Cria a primeira conta |
 | `POST /api/auth/login` | Inicia sessão |
@@ -164,7 +177,7 @@ Em VPS, Nginx e HTTPS são obrigatórios para acesso externo. As portas internas
 
 A interface possui manifesto, ícone e service worker. Os arquivos estáticos são armazenados em cache para abertura da interface; artigos e mídias continuam dependendo do servidor.
 
-O cache atual é identificado como `biblio-shell-v39`.
+O cache atual é identificado como `biblio-shell-v44`.
 
 ## 10. Interface de leitura e edição
 
@@ -181,6 +194,8 @@ O cache atual é identificado como `biblio-shell-v39`.
 - O menu **Bíblia Sagrada** organiza os 39 livros do Velho Testamento e os 27 do Novo Testamento, abre capítulos, navega entre capítulos e aceita referências como `João 3:16`.
 - A pesquisa bíblica usa seu próprio índice SQLite FTS5. Seus resultados nunca são misturados à pesquisa de artigos.
 - O texto offline é a Bíblia Livre 2018 (BLIVRE), CC BY 4.0 Brasil, importada do pacote USFM oficial da eBible.org. Créditos e procedência permanecem visíveis na interface.
+- O menu **Hebraico Bíblico** consulta offline uma edição condensada em português do *UBS Dictionary of Biblical Hebrew*, pesquisa por quatro formas de entrada e abre na Bíblia Livre os versículos citados em cada sentido.
+- O conteúdo lexical mantém atribuição à United Bible Societies e licença CC BY-SA 4.0; a interface também explica que glossas não substituem análise contextual e gramatical.
 - Edição e criação usam um editor sobreposto à interface, com fundo desfocado e barra de ferramentas fixa.
 - O editor permite aplicar tamanho e cor ao texto, além das opções de formatação anteriores.
 - O editor permite alterar a entrelinha dos parágrafos entre compacta, normal, confortável e ampla.

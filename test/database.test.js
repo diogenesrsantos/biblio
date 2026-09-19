@@ -17,5 +17,8 @@ test('migra banco novo de forma idempotente', async t => {
   assert.deepEqual(versions.map(row => row.version), MIGRATIONS.map(item => item.version));
   assert.equal((await database.query('SELECT * FROM themes')).rows.length, 4);
   assert.equal((await database.query('SELECT * FROM articles WHERE is_library_home=1')).rows.length, 1);
+  const highlightColumns = (await database.query('PRAGMA table_info(bible_highlights)')).rows.map(column => column.name);
+  assert.ok(highlightColumns.includes('verse_text'));
+  assert.ok(highlightColumns.includes('note'));
   assert.deepEqual(database.integrityCheck(), ['ok']);
 });

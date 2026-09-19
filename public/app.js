@@ -24,6 +24,8 @@ let selectedEditorImage = null;
 let bibleData = null;
 let selectedBibleBook = null;
 let selectedBibleChapter = null;
+let selectedBibleHighlight = null;
+let hebrewData = null;
 const expandedBibleTestaments = new Set();
 const visualThemes = ['classic', 'ocean', 'sepia', 'rose', 'lavender', 'slate'];
 const titleAlignControl = document.createElement('label');
@@ -229,7 +231,7 @@ async function loadArticle(id) {
 
 const normalizedBibleName = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
-function showBibleReader(title, content, { navigation = false, license = true } = {}) {
+function showBibleReader(title, content, { navigation = false, license = true, section = 'bible', eyebrow = 'BÍBLIA SAGRADA · BLIVRE' } = {}) {
   currentArticle = null;
   themeNavigation = [];
   $('#welcome').hidden = true;
@@ -238,12 +240,14 @@ function showBibleReader(title, content, { navigation = false, license = true } 
   $('#themeArticleNav').hidden = true;
   $('#bibleReader').hidden = false;
   $('#bibleReaderTitle').textContent = title;
+  $('#bibleReaderEyebrow').textContent = eyebrow;
   $('#bibleReaderContent').innerHTML = content;
   $('#bibleChapterNav').hidden = !navigation;
   $('#bibleLicense').hidden = !license;
   $('#libraryHome').classList.remove('active');
   $('#allThemes').classList.remove('active');
-  $('#bibleToggle').classList.add('active');
+  $('#bibleToggle').classList.toggle('active', section === 'bible');
+  $('#hebrewToggle').classList.toggle('active', section === 'hebrew');
   toggleMedia(false);
   $('#bibleReader').scrollIntoView({ block: 'start' });
 }
@@ -262,6 +266,7 @@ function showBibleLanding() {
 async function loadBibleIndex(showLanding = true) {
   if (!bibleData) bibleData = await api('/api/bible');
   renderBibleMenu();
+  refreshBibleHighlightCount();
   if (showLanding) showBibleLanding();
   return bibleData;
 }
@@ -296,12 +301,71 @@ async function loadBibleChapter(code, chapter, verse = null) {
     const data = await api(`/api/bible/books/${code}/chapters/${chapter}`);
     selectedBibleBook = bibleData.books.find(book => book.code === code);
     selectedBibleChapter = chapter;
-    const verses = data.verses.map(item => `<p id="bible-verse-${escapeHtml(item.verse)}" class="bibleVerse${String(item.verse) === String(verse) ? ' highlight' : ''}"><sup class="bibleVerseNumber">${escapeHtml(item.verse)}</sup>${escapeHtml(item.text)}</p>`).join('');
+    const highlights = new Map(data.highlights.map(item => [String(item.verse), item]));
+    const verses = data.verses.map(item => { const marking = highlights.get(String(item.verse)); return `<p id="bible-verse-${escapeHtml(item.verse)}" class="bibleVerse${marking ? ` marked marked-${marking.color}` : ''}${String(item.verse) === String(verse) ? ' highlight' : ''}"><button class="bibleMarkButton" type="button" data-bible-mark="${escapeHtml(item.verse)}" aria-label="${marking ? 'Editar' : 'Marcar'} ${escapeHtml(data.book.name)} ${chapter}:${escapeHtml(item.verse)}" title="${marking ? 'Editar marcação' : 'Marcar versículo'}">▰</button><span><sup class="bibleVerseNumber">${escapeHtml(item.verse)}</sup>${escapeHtml(item.text)}</span>${marking?.note ? '<small class="bibleVerseNote">'+escapeHtml(marking.note)+'</small>' : ''}</p>`; }).join('');
     showBibleReader(`${data.book.name} ${chapter}`, `<div class="bibleVerses">${verses}</div>`, { navigation: true });
     $('#biblePosition').textContent = `${data.book.name} ${chapter}`;
     $('#bibleLicense').innerHTML = bibleLicenseHtml();
     renderBibleMenu();
+    document.querySelectorAll('[data-bible-mark]').forEach(button => button.onclick = () => { const item = data.verses.find(candidate => String(candidate.verse) === button.dataset.bibleMark); openBibleHighlightDialog({ book_code: code, book_name: data.book.name, chapter, verse: item.verse, verse_text: item.text, ...(highlights.get(String(item.verse)) || {}) }); });
     if (verse) setTimeout(() => document.getElementById(`bible-verse-${verse}`)?.scrollIntoView({ block: 'center' }), 0);
+  } catch (error) { toast(error.message); }
+}
+
+async function refreshBibleHighlightCount() {
+  try { const response = await api('/api/bible/highlights'); $('#bibleHighlightsCount').textContent = response.results.length; }
+  catch {}
+}
+
+function openBibleHighlightDialog(highlight) {
+  selectedBibleHighlight = highlight;
+  $('#bibleHighlightReference').textContent = `${highlight.book_name} ${highlight.chapter}:${highlight.verse}`;
+  $('#bibleHighlightExcerpt').textContent = highlight.verse_text;
+  $('#bibleHighlightNote').value = highlight.note || '';
+  const selectedColor = highlight.color || 'yellow';
+  document.querySelectorAll('[name="highlight_color"]').forEach(input => { input.checked = input.value === selectedColor; });
+  $('#removeBibleHighlight').hidden = !highlight.id;
+  $('#bibleHighlightDialog').showModal();
+}
+
+async function saveBibleHighlight(event) {
+  event.preventDefault();
+  if (!selectedBibleHighlight) return;
+  try {
+    await api('/api/bible/highlights', { method: 'PUT', body: JSON.stringify({ book_code: selectedBibleHighlight.book_code, chapter: selectedBibleHighlight.chapter, verse: selectedBibleHighlight.verse, color: document.querySelector('[name="highlight_color"]:checked').value, note: $('#bibleHighlightNote').value }) });
+    $('#bibleHighlightDialog').close();
+    toast('Marcação salva.');
+    await loadBibleChapter(selectedBibleHighlight.book_code, selectedBibleHighlight.chapter, selectedBibleHighlight.verse);
+    refreshBibleHighlightCount();
+  } catch (error) { toast(error.message); }
+}
+
+async function removeBibleHighlight() {
+  if (!selectedBibleHighlight?.id) return;
+  try {
+    const { book_code: code, chapter, verse } = selectedBibleHighlight;
+    await api('/api/bible/highlights/' + selectedBibleHighlight.id, { method: 'DELETE' });
+    $('#bibleHighlightDialog').close();
+    toast('Marcação removida.');
+    await loadBibleChapter(code, chapter, verse);
+    refreshBibleHighlightCount();
+  } catch (error) { toast(error.message); }
+}
+
+async function showBibleHighlights() {
+  try {
+    await loadBibleIndex(false);
+    const response = await api('/api/bible/highlights');
+    const colors = { yellow: 'Amarelo', green: 'Verde', blue: 'Azul', pink: 'Rosa', orange: 'Laranja' };
+    const filters = `<div class="bibleHighlightFilters"><input id="highlightIndexSearch" type="search" placeholder="Pesquisar texto, nota ou livro" aria-label="Pesquisar marcações"><select id="highlightIndexColor" aria-label="Filtrar marcações por cor"><option value="">Todas as cores</option>${Object.entries(colors).map(([value,label])=>`<option value="${value}">${label}</option>`).join('')}</select></div>`;
+    const cards = response.results.length ? `<div id="bibleHighlightList" class="bibleHighlightList">${response.results.map(item => `<button class="bibleHighlightCard marked-${item.color}" type="button" data-highlight-reference="${item.book_code}:${item.chapter}:${escapeHtml(item.verse)}" data-highlight-search="${escapeHtml(`${item.book_name} ${item.chapter}:${item.verse} ${item.verse_text} ${item.note}`.toLowerCase())}" data-highlight-color="${item.color}"><strong><i class="highlightSwatch ${item.color}"></i>${escapeHtml(item.book_name)} ${item.chapter}:${escapeHtml(item.verse)}</strong><span>${escapeHtml(item.verse_text)}</span>${item.note ? `<small>${escapeHtml(item.note)}</small>` : ''}</button>`).join('')}</div>` : '<p class="bibleSearchEmpty">Você ainda não marcou nenhum versículo.</p>';
+    showBibleReader('Minhas marcações', filters + cards, { navigation: false });
+    $('#bibleLicense').innerHTML = 'As marcações e notas fazem parte da sua biblioteca e são incluídas nas cópias de segurança.';
+    document.querySelectorAll('[data-highlight-reference]').forEach(button => button.onclick = () => { const [book,chapter,verse] = button.dataset.highlightReference.split(':'); loadBibleChapter(book,Number(chapter),verse); });
+    const filter = () => { const term = normalizedBibleName($('#highlightIndexSearch').value), color = $('#highlightIndexColor').value; document.querySelectorAll('.bibleHighlightCard').forEach(card => { card.hidden = Boolean((term && !normalizedBibleName(card.dataset.highlightSearch).includes(term)) || (color && card.dataset.highlightColor !== color)); }); };
+    $('#highlightIndexSearch').oninput = filter;
+    $('#highlightIndexColor').onchange = filter;
+    $('#bibleHighlightsCount').textContent = response.results.length;
   } catch (error) { toast(error.message); }
 }
 
@@ -337,6 +401,60 @@ function showBibleAbout() {
   showBibleReader('Sobre a Bíblia Livre', `<div class="bibleLanding"><div class="bibleLandingMark">BL</div><h2>${escapeHtml(bibleData.translation.name)}</h2><p>${escapeHtml(bibleData.translation.license)}</p><p>Texto armazenado localmente e disponível sem conexão com a internet.</p><p><a href="${escapeHtml(bibleData.translation.source_url)}" target="_blank" rel="noopener noreferrer">Consultar fonte e licença</a></p></div>`, { navigation: false, license: false });
 }
 
+function hebrewLicenseHtml() {
+  const source = hebrewData?.source;
+  if (!source) return '';
+  return `${escapeHtml(source.copyright)} · ${escapeHtml(source.license)}<br><a href="${escapeHtml(source.source_url)}" target="_blank" rel="noopener noreferrer">Fonte UBS</a> · <a href="${escapeHtml(source.derivative_url)}" target="_blank" rel="noopener noreferrer">Edição condensada em português</a>`;
+}
+
+async function loadHebrewInfo(showLanding = true) {
+  if (!hebrewData) hebrewData = await api('/api/hebrew');
+  $('#hebrewToggle .themeCount').textContent = Number(hebrewData.counts.entries).toLocaleString('pt-BR');
+  if (showLanding) {
+    showBibleReader('Hebraico Bíblico', '<div class="bibleLanding hebrewLanding"><div class="bibleLandingMark" lang="he" dir="rtl">א</div><p class="eyebrow">DICIONÁRIO OFFLINE</p><h2>Pesquise palavras do<br>Antigo Testamento.</h2><p class="muted">Use português, hebraico, transliteração ou número Strong.</p></div>', { navigation: false, section: 'hebrew', eyebrow: 'LÉXICO OFFLINE · HEBRAICO–PORTUGUÊS' });
+    $('#bibleLicense').innerHTML = hebrewLicenseHtml();
+  }
+  return hebrewData;
+}
+
+async function searchHebrew() {
+  const term = $('#hebrewSearch').value.trim();
+  if (!term) return toast('Digite uma palavra ou código para pesquisar.');
+  try {
+    await loadHebrewInfo(false);
+    const response = await api('/api/hebrew/search?q=' + encodeURIComponent(term));
+    const content = response.results.length ? `<div class="hebrewResults">${response.results.map(entry => `<button class="hebrewResult" type="button" data-hebrew-entry="${entry.id}"><span class="hebrewResultWord" lang="he" dir="rtl">${escapeHtml(entry.lemma)}</span><span class="hebrewResultMeta">${escapeHtml(entry.transliteration)}${entry.strong_codes ? ` · ${escapeHtml(entry.strong_codes.replace(/ /g, ' · '))}` : ''}</span><strong>${escapeHtml(entry.glosses || 'Sem glossa resumida')}</strong><small>${entry.sense_count} ${entry.sense_count === 1 ? 'sentido' : 'sentidos'}${entry.parts_of_speech ? ` · ${escapeHtml(entry.parts_of_speech)}` : ''}</small></button>`).join('')}</div>` : '<p class="bibleSearchEmpty">Nenhum verbete encontrado.</p>';
+    showBibleReader(`Pesquisa: ${term}`, content, { navigation: false, section: 'hebrew', eyebrow: 'LÉXICO OFFLINE · RESULTADOS' });
+    $('#bibleLicense').innerHTML = hebrewLicenseHtml();
+    document.querySelectorAll('[data-hebrew-entry]').forEach(button => button.onclick = () => loadHebrewEntry(Number(button.dataset.hebrewEntry)));
+  } catch (error) { toast(error.message); }
+}
+
+async function loadHebrewEntry(id) {
+  try {
+    await loadHebrewInfo(false);
+    const entry = await api('/api/hebrew/entries/' + id);
+    const strong = entry.strong_codes ? entry.strong_codes.split(' ').map(code => `<span>${escapeHtml(code)}</span>`).join('') : '';
+    const senses = entry.senses.map((sense, index) => {
+      const references = sense.references.map(reference => `<button type="button" data-hebrew-reference="${escapeHtml(reference.code)}:${reference.chapter}:${reference.verse}">${escapeHtml(reference.book_name)} ${reference.chapter}:${reference.verse}</button>`).join('');
+      const remaining = Math.max(0, Number(sense.reference_count) - sense.references.length);
+      return `<section class="hebrewSense"><div class="hebrewSenseHeading"><span>${index + 1}</span><div><strong>${escapeHtml(sense.glosses.join('; ') || 'Sentido lexical')}</strong><small>${escapeHtml([sense.part_of_speech, sense.domain].filter(Boolean).join(' · '))}</small></div></div>${sense.definition ? `<p>${escapeHtml(sense.definition)}</p>` : ''}${references ? `<details><summary>${sense.reference_count} ${sense.reference_count === 1 ? 'ocorrência bíblica' : 'ocorrências bíblicas'}</summary><div class="hebrewReferences">${references}${remaining ? `<span>+ ${remaining} referências</span>` : ''}</div></details>` : ''}</section>`;
+    }).join('');
+    const content = `<div class="hebrewEntry"><div class="hebrewEntryHero"><div class="hebrewLemma" lang="he" dir="rtl">${escapeHtml(entry.lemma)}</div><div><p class="hebrewTransliteration">${escapeHtml(entry.transliteration)}</p><div class="hebrewStrong">${strong}</div><p>${escapeHtml(entry.glosses)}</p></div></div>${senses}</div>`;
+    showBibleReader(entry.lemma_plain, content, { navigation: false, section: 'hebrew', eyebrow: 'LÉXICO OFFLINE · VERBETE' });
+    $('#bibleLicense').innerHTML = hebrewLicenseHtml() + '<br>Glossas são possibilidades de sentido e devem ser avaliadas no contexto literário e gramatical.';
+    document.querySelectorAll('[data-hebrew-reference]').forEach(button => button.onclick = () => { const [book, chapter, verse] = button.dataset.hebrewReference.split(':'); loadBibleChapter(book, Number(chapter), verse); });
+  } catch (error) { toast(error.message); }
+}
+
+async function showHebrewAbout() {
+  try {
+    await loadHebrewInfo(false);
+    const source = hebrewData.source;
+    showBibleReader('Sobre o dicionário', `<div class="hebrewAbout"><div class="bibleLandingMark" lang="he" dir="rtl">א</div><h2>${escapeHtml(source.name)}</h2><p>${escapeHtml(source.copyright)}</p><p>${escapeHtml(source.license)}</p><p>A edição contém ${Number(hebrewData.counts.entries).toLocaleString('pt-BR')} verbetes e ${Number(hebrewData.counts.senses).toLocaleString('pt-BR')} sentidos, armazenados localmente. A Biblio acrescenta índices de pesquisa e transliteração auxiliar.</p><p><a href="${escapeHtml(source.source_url)}" target="_blank" rel="noopener noreferrer">Consultar a fonte UBS</a></p><p class="muted">Este recurso auxilia o estudo lexical, mas não substitui a análise do contexto, da sintaxe e da literatura especializada.</p></div>`, { navigation: false, license: false, section: 'hebrew', eyebrow: 'LÉXICO OFFLINE · CRÉDITOS' });
+  } catch (error) { toast(error.message); }
+}
+
 async function loadLibraryHome() {
   try {
     currentArticle = await api('/api/home');
@@ -355,6 +473,7 @@ function renderReader() {
   $('#bibleReader').hidden = true;
   $('#readerActions').hidden = false;
   $('#bibleToggle').classList.remove('active');
+  $('#hebrewToggle').classList.remove('active');
   $('#showInfo').disabled = !hasArticle;
   $('#editArticle').disabled = !hasArticle;
   $('#printArticle').disabled = !hasArticle;
@@ -1035,8 +1154,12 @@ async function validateAppearanceImage(file, type) {
   if (type === 'banner' && (width < 1200 || height < 480 || ratio < 2.3 || ratio > 2.7)) {
     throw new Error(`O banner selecionado tem ${width} × ${height} px. Use proporção 5:2 e no mínimo 1200 × 480 px.`);
   }
-  if (type === 'welcome' && (width < 800 || height < 1200 || ratio < .62 || ratio > .72)) {
-    throw new Error(`A imagem do popup tem ${width} × ${height} px. Use proporção vertical 2:3 e no mínimo 800 × 1200 px.`);
+  const welcomeRatio = 2 / 3;
+  const welcomeTolerance = .2;
+  const welcomeMinWidth = 800 * (1 - welcomeTolerance);
+  const welcomeMinHeight = 1200 * (1 - welcomeTolerance);
+  if (type === 'welcome' && (width < welcomeMinWidth || height < welcomeMinHeight || ratio < welcomeRatio * (1 - welcomeTolerance) || ratio > welcomeRatio * (1 + welcomeTolerance))) {
+    throw new Error(`A imagem do popup tem ${width} × ${height} px. Use proporção vertical 2:3 (tolerância de 20%) e no mínimo 640 × 960 px.`);
   }
 }
 
@@ -1306,7 +1429,23 @@ $('#bibleToggle').onclick = async () => {
     const panel = $('#biblePanel');
     panel.hidden = !panel.hidden;
     $('#bibleToggle').setAttribute('aria-expanded', String(!panel.hidden));
-    if (!panel.hidden) await loadBibleIndex($('#bibleReader').hidden);
+    if (!panel.hidden) {
+      $('#hebrewPanel').hidden = true;
+      $('#hebrewToggle').setAttribute('aria-expanded', 'false');
+      await loadBibleIndex($('#bibleReader').hidden || !$('#bibleToggle').classList.contains('active'));
+    }
+  } catch (error) { toast(error.message); }
+};
+$('#hebrewToggle').onclick = async () => {
+  try {
+    const panel = $('#hebrewPanel');
+    panel.hidden = !panel.hidden;
+    $('#hebrewToggle').setAttribute('aria-expanded', String(!panel.hidden));
+    if (!panel.hidden) {
+      $('#biblePanel').hidden = true;
+      $('#bibleToggle').setAttribute('aria-expanded', 'false');
+      await loadHebrewInfo($('#bibleReader').hidden || !$('#hebrewToggle').classList.contains('active'));
+    }
   } catch (error) { toast(error.message); }
 };
 document.querySelectorAll('[data-bible-testament]').forEach(button => button.onclick = async () => {
@@ -1322,6 +1461,13 @@ $('#bibleSearch').onkeydown = event => { if (event.key === 'Enter') { event.prev
 $('#biblePrevious').onclick = () => adjacentBibleChapter(-1);
 $('#bibleNext').onclick = () => adjacentBibleChapter(1);
 $('#bibleAbout').onclick = async () => { await loadBibleIndex(false); showBibleAbout(); };
+$('#bibleHighlights').onclick = showBibleHighlights;
+$('#bibleHighlightForm').onsubmit = saveBibleHighlight;
+$('#removeBibleHighlight').onclick = removeBibleHighlight;
+$('#hebrewSearchButton').onclick = searchHebrew;
+$('#hebrewSearch').onkeydown = event => { if (event.key === 'Enter') { event.preventDefault(); searchHebrew(); } };
+document.querySelectorAll('[data-hebrew-example]').forEach(button => button.onclick = () => { $('#hebrewSearch').value = button.dataset.hebrewExample; searchHebrew(); });
+$('#hebrewAbout').onclick = showHebrewAbout;
 $('#allThemes').onclick = () => selectTheme(null);
 $('#searchButton').onclick = renderList;
 $('#titleColor').oninput = event => { $('#title').style.color = event.target.value; };

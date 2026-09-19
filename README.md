@@ -16,6 +16,12 @@ O módulo **Bíblia Sagrada** inclui a Bíblia Livre 2018 em português brasilei
 
 Todas as Escrituras em português do módulo são da Bíblia Livre (BLIVRE), Copyright © 2018 Diego Santos, Mario Sérgio e Marco Teles, sob licença Creative Commons Atribuição 4.0 Brasil. Os créditos completos e a procedência estão em [resources/bible/README.md](resources/bible/README.md) e na própria interface.
 
+## Hebraico bíblico offline
+
+O módulo **Hebraico Bíblico** oferece 7.597 verbetes e 15.272 sentidos em português. A pesquisa aceita palavras em português, hebraico com ou sem sinais vocálicos, transliteração e códigos Strong. Cada sentido apresenta definição, classe gramatical, domínio semântico e atalhos para suas ocorrências na Bíblia.
+
+O conteúdo lexical deriva do *UBS Dictionary of Biblical Hebrew*, © United Bible Societies, 2023, sob licença CC BY-SA 4.0. A procedência, o hash da fonte e as adaptações realizadas estão documentados em [resources/hebrew/README.md](resources/hebrew/README.md).
+
 Consulte [INSTALL.md](INSTALL.md) para gerar e testar instaladores de Windows e Linux.
 
 Para uma implantação dedicada em VPS, siga [VPS-SQLITE-NGINX.md](VPS-SQLITE-NGINX.md).

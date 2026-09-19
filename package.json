@@ -16,6 +16,7 @@
     "test": "node --test --test-concurrency=1",
     "backup": "node scripts/backup.js",
     "build:bible": "node scripts/build-bible.js",
+    "build:hebrew": "node scripts/build-hebrew.js",
     "restore": "node scripts/restore.js",
     "rebuild:desktop": "electron-rebuild -f -w better-sqlite3",
     "dist": "electron-builder",
@@ -32,7 +33,8 @@
     "asar": true,
     "asarUnpack": [
       "node_modules/better-sqlite3/**",
-      "resources/bible/bible.sqlite"
+      "resources/bible/bible.sqlite",
+      "resources/hebrew/hebrew.sqlite"
     ],
     "files": [
       "**/*",
