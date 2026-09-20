@@ -318,6 +318,11 @@ label input, label textarea, label select { display: block; margin-top: 5px; fon
 .editorToolbar .toolbarPopover button { width: 100%; display: flex; align-items: center; gap: 9px; border-color: transparent; text-align: left; }
 .colorControl { width: auto; display: flex; align-items: center; gap: 6px; padding: 3px 7px; border: 1px solid var(--line); border-radius: 5px; background: #fff; font-size: .76rem; }
 .colorControl input { width: 24px; height: 23px; margin: 0; padding: 1px; border: 0; }
+.imageResizeControls { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 2px 5px; border: 1px solid var(--line); border-radius: 5px; background: #fff; }
+.editorToolbar .imageResizeControls button { min-width: 28px; padding-right: 6px; padding-left: 6px; border: 0; }
+.imageResizeControls input[type="range"] { width: 92px; accent-color: var(--accent); cursor: pointer; }
+.imageResizeControls input[type="range"]:disabled { cursor: default; opacity: .45; }
+.imageResizeControls output { min-width: 43px; color: var(--muted); font-size: .7rem; font-variant-numeric: tabular-nums; text-align: center; }
 .editorCanvas { overflow: auto; padding: 31px clamp(22px, 5vw, 72px) 60px; }
 .editorMetadata, .contentField, .supportGrid { width: min(100%, 940px); margin-right: auto; margin-left: auto; }
 .formTop > div { min-width: 0; }

@@ -1020,29 +1020,45 @@ function selectEditorImage(image) {
   selectedEditorImage = image && $('#content')?.contains(image) ? image : null;
   selectedEditorImage?.classList.add('selectedEditorImage');
   const control = $('#imageSize');
+  const range = $('#imageSizeRange');
+  const valueLabel = $('#imageSizeValue');
   const wrapControl = $('#imageWrap');
   const removeControl = $('#removeEditorImage');
-  if (!control || !wrapControl || !removeControl) return;
-  control.disabled = !selectedEditorImage;
-  wrapControl.disabled = !selectedEditorImage;
-  removeControl.disabled = !selectedEditorImage;
-  const width = selectedEditorImage?.style.width?.replace('%', '');
-  control.value = ['25', '50', '75', '100'].includes(width) ? width : selectedEditorImage ? 'original' : '';
+  const imageControls = [control, range, wrapControl, removeControl, $('#decreaseImageSize'), $('#increaseImageSize'), $('#resetImageSize')];
+  if (imageControls.some(item => !item) || !valueLabel) return;
+  imageControls.forEach(item => { item.disabled = !selectedEditorImage; });
+  const styledWidth = Number.parseInt(selectedEditorImage?.style.width, 10);
+  const width = Number.isInteger(styledWidth) && styledWidth >= 10 && styledWidth <= 100 ? styledWidth : 100;
+  range.value = String(width);
+  valueLabel.value = selectedEditorImage && !selectedEditorImage.style.width ? 'Original' : `${width}%`;
+  valueLabel.textContent = valueLabel.value;
+  control.value = ['25', '50', '75', '100'].includes(String(width)) && selectedEditorImage?.style.width
+    ? String(width)
+    : selectedEditorImage && !selectedEditorImage.style.width ? 'original' : '';
   const figure = selectedEditorImage?.closest('figure');
   wrapControl.value = figure?.classList.contains('image-wrap-left') ? 'left' : figure?.classList.contains('image-wrap-right') ? 'right' : selectedEditorImage ? 'center' : '';
 }
 
-function setEditorImageSize(value) {
+function setEditorImageSize(value, announce = true) {
   if (!selectedEditorImage || !$('#content').contains(selectedEditorImage)) return selectEditorImage(null);
   if (value === 'original') {
     selectedEditorImage.style.removeProperty('width');
     selectedEditorImage.style.removeProperty('height');
     if (!selectedEditorImage.getAttribute('style')) selectedEditorImage.removeAttribute('style');
-  } else if (['25', '50', '75', '100'].includes(value)) {
-    selectedEditorImage.style.width = `${value}%`;
+  } else {
+    const width = Math.min(100, Math.max(10, Math.round(Number(value) / 5) * 5));
+    if (!Number.isFinite(width)) return;
+    selectedEditorImage.style.width = `${width}%`;
     selectedEditorImage.style.height = 'auto';
+    value = String(width);
   }
-  toast(value === 'original' ? 'Tamanho original aplicado.' : `Imagem ajustada para ${value}% do texto.`);
+  selectEditorImage(selectedEditorImage);
+  if (announce) toast(value === 'original' ? 'Tamanho original aplicado.' : `Imagem ajustada para ${value}% da largura do texto.`);
+}
+
+function stepEditorImageSize(direction) {
+  const current = Number($('#imageSizeRange').value) || 100;
+  setEditorImageSize(current + direction * 5);
 }
 
 function setEditorImageWrap(value) {
@@ -1091,6 +1107,11 @@ function setupRichEditor() {
   $('#lineSpacing').onchange = event => { if (event.target.value) setLineSpacing(event.target.value); event.target.value = ''; };
   $('#textColumns').onchange = event => { if (event.target.value) setTextColumns(event.target.value); event.target.value = ''; };
   $('#imageSize').onchange = event => setEditorImageSize(event.target.value);
+  $('#imageSizeRange').oninput = event => setEditorImageSize(event.target.value, false);
+  $('#imageSizeRange').onchange = event => setEditorImageSize(event.target.value);
+  $('#decreaseImageSize').onclick = () => stepEditorImageSize(-1);
+  $('#increaseImageSize').onclick = () => stepEditorImageSize(1);
+  $('#resetImageSize').onclick = () => setEditorImageSize('original');
   $('#imageWrap').onchange = event => setEditorImageWrap(event.target.value);
   $('#removeEditorImage').onclick = removeEditorImage;
   $('#fontColor').oninput = event => runCommand('foreColor', event.target.value);

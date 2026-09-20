@@ -19,6 +19,13 @@ test('normaliza links e remove imagens externas', () => {
   assert.match(clean, /\/media\/a.png/);
 });
 
+test('preserva o redimensionamento visual seguro das imagens', () => {
+  const clean = cleanContent('<img src="/media/a.png" style="width:35%;height:auto"><img src="/media/b.png" style="width:5%;height:300px">');
+  assert.match(clean, /width:35%/);
+  assert.match(clean, /height:auto/);
+  assert.doesNotMatch(clean, /width:5%|height:300px/);
+});
+
 test('remove do conteúdo a figura de um anexo excluído', () => {
   const clean = cleanContent('<p>Antes</p><figure><img src="/media/foto.png"></figure><p>Depois</p>', 'foto.png');
   assert.doesNotMatch(clean, /foto\.png/);

@@ -1,5 +1,5 @@
-const CACHE = 'biblio-shell-v45';
-const ASSETS = ['/', '/style.css?v=highlights-v1', '/app.js?v=highlights-v1', '/api.js?v=highlights-v1', '/manifest.webmanifest', '/icon.svg', '/brand/reverendo-albert-banner.png', '/brand/reverendo-albert-boas-vindas.png'];
+const CACHE = 'biblio-shell-v46';
+const ASSETS = ['/', '/style.css?v=image-resize-v1', '/app.js?v=image-resize-v1', '/api.js?v=image-resize-v1', '/manifest.webmanifest', '/icon.svg', '/brand/reverendo-albert-banner.png', '/brand/reverendo-albert-boas-vindas.png'];
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting())));
 self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', event => {

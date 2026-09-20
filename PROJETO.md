@@ -207,6 +207,7 @@ O cache atual é identificado como `biblio-shell-v44`.
 - A cor do título possui controle próprio e é preservada junto ao artigo.
 - Imagens escolhidas no campo de mídias são incorporadas na posição atual do cursor; vídeos permanecem como anexos.
 - Imagens selecionadas no editor podem usar largura de 25%, 50%, 75%, 100% ou o tamanho original; a dimensão é preservada na leitura e na impressão.
+- A largura visual da imagem também pode ser ajustada de 10% a 100%, em passos de 5%, por controle deslizante e botões de redução ou ampliação; o arquivo original não é modificado.
 - Uma imagem selecionada no editor pode ficar em linha própria ou à esquerda/direita, com o texto contornando-a; em telas estreitas ela volta a ocupar sua própria linha.
 - A imagem selecionada pode ser removida do texto pelo editor; a exclusão definitiva do arquivo continua disponível no painel de mídias.
 - Cada tema principal pode ter, opcionalmente, um único **artigo de apresentação**. Ele é criado ou editado pelo botão de casa no tema, abre primeiro na seleção daquele tema e identifica o assunto do acervo.

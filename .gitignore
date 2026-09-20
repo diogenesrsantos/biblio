@@ -3,5 +3,8 @@ dist/
 data/*.db
 data/*.db-*
 data/media/
+resources/**/*.sqlite-shm
+resources/**/*.sqlite-wal
 .env
 testes
+arquivos-inativos/
