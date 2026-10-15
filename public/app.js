@@ -1318,6 +1318,22 @@ function backupFilename() {
   return `biblio-backup-${stamp}.zip`;
 }
 
+function backupPickerAvailable() {
+  return typeof window.showDirectoryPicker === 'function' || typeof window.showSaveFilePicker === 'function';
+}
+
+function useBackupDownload() {
+  backupCompleted = false;
+  backupDirectory = null;
+  backupFile = null;
+  $('#backupDestinationLabel').textContent = 'Download do navegador';
+  $('#backupDetail').textContent = 'Ao baixar, o navegador salva na pasta de downloads ou pergunta onde salvar, conforme suas configurações.';
+  $('#backupStatus').textContent = 'Pronto para baixar a cópia.';
+  $('#chooseBackupFolder').textContent = 'Baixar cópia';
+  $('#startBackup').textContent = 'Baixar cópia';
+  $('#startBackup').disabled = false;
+}
+
 function resetBackupDialog() {
   backupDirectory = null;
   backupFile = null;
@@ -1330,10 +1346,12 @@ function resetBackupDialog() {
   $('#backupPercent').textContent = '0%';
   $('#backupDetail').textContent = 'A cópia só começa depois que você escolher o destino.';
   $('#chooseBackupFolder').disabled = false;
+  $('#chooseBackupFolder').textContent = typeof window.showDirectoryPicker === 'function' ? 'Escolher pasta' : 'Escolher arquivo';
   $('#startBackup').disabled = true;
   $('#startBackup').textContent = 'Iniciar backup';
   $('#cancelBackup').disabled = true;
   $('#closeBackup').disabled = false;
+  if (!backupPickerAvailable()) useBackupDownload();
 }
 
 function updateBackupProgress(received, total) {
@@ -1398,7 +1416,7 @@ async function runBackup() {
     $('#backupProgress').value = 100;
     $('#backupPercent').textContent = '100%';
     $('#backupStatus').textContent = 'Backup concluído';
-    $('#backupDetail').textContent = `Arquivo salvo como ${filename}.`;
+    $('#backupDetail').textContent = writable ? `Arquivo salvo como ${filename}.` : `Download de ${filename} enviado ao navegador. Confira a pasta de downloads ou a janela de salvamento.`;
     backupCompleted = true;
     $('#startBackup').textContent = 'Fechar';
     $('#startBackup').disabled = false;
@@ -1419,8 +1437,8 @@ async function runBackup() {
     backupWritable = null;
     $('#chooseBackupFolder').disabled = false;
     if (!backupCompleted) {
-      $('#startBackup').disabled = !backupDirectory && !backupFile;
-      $('#startBackup').textContent = 'Iniciar backup';
+      $('#startBackup').disabled = false;
+      $('#startBackup').textContent = backupDirectory || backupFile ? 'Iniciar backup' : 'Baixar cópia';
     }
     $('#cancelBackup').disabled = true;
     $('#closeBackup').disabled = false;
@@ -1682,29 +1700,31 @@ $('#logout').onclick = async () => { await api('/api/auth/logout', { method: 'PO
 
 $('#backupButton').onclick = () => { resetBackupDialog(); $('#backupDialog').showModal(); };
 $('#chooseBackupFolder').onclick = async () => {
+  if (!backupPickerAvailable() || $('#chooseBackupFolder').textContent === 'Baixar cópia') {
+    backupCompleted = false;
+    return runBackup();
+  }
   try {
-    if ('showDirectoryPicker' in window) {
+    if (typeof window.showDirectoryPicker === 'function') {
       backupDirectory = await window.showDirectoryPicker({ mode: 'readwrite' });
       backupFile = null;
       $('#backupDestinationLabel').textContent = `Pasta: ${backupDirectory.name || 'escolhida'}`;
       $('#backupDetail').textContent = 'A Biblio criará o arquivo ZIP dentro desta pasta.';
-    } else if ('showSaveFilePicker' in window) {
+    } else if (typeof window.showSaveFilePicker === 'function') {
       backupFile = await window.showSaveFilePicker({ suggestedName: backupFilename(), types: [{ description: 'Backup da Biblio', accept: { 'application/zip': ['.zip'] } }] });
       backupDirectory = null;
       $('#backupDestinationLabel').textContent = 'Arquivo de backup escolhido';
       $('#backupDetail').textContent = 'O arquivo ZIP será gravado no local selecionado.';
-    } else {
-      backupDirectory = null;
-      backupFile = null;
-      $('#backupDestinationLabel').textContent = 'Download padrão do navegador';
-      $('#backupDetail').textContent = 'Este navegador não permite escolher pastas; a cópia será baixada automaticamente.';
     }
     backupCompleted = false;
     $('#startBackup').textContent = 'Iniciar backup';
     $('#startBackup').disabled = false;
     $('#backupStatus').textContent = 'Destino pronto. Você pode iniciar o backup.';
   } catch (error) {
-    if (error.name !== 'AbortError') toast(error.message || 'Não foi possível escolher o destino.');
+    if (error.name !== 'AbortError') {
+      useBackupDownload();
+      $('#backupStatus').textContent = 'O navegador não permitiu abrir o seletor. Você pode baixar a cópia.';
+    }
   }
 };
 $('#startBackup').onclick = () => { if (backupCompleted) $('#backupDialog').close(); else runBackup(); };

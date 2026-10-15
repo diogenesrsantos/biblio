@@ -1,5 +1,5 @@
-const CACHE = 'biblio-shell-v51';
-const ASSETS = ['/', '/style.css?v=dictionary-v3', '/app.js?v=dictionary-v3', '/api.js?v=dictionary-v3', '/tools-core.js?v=dictionary-v3', '/tools.js?v=dictionary-v3', '/dictionary.js?v=dictionary-v3', '/manifest.webmanifest', '/icon.svg', '/brand/reverendo-albert-banner.png', '/brand/reverendo-albert-boas-vindas.png'];
+const CACHE = 'biblio-shell-v52';
+const ASSETS = ['/', '/style.css?v=backup-v4', '/app.js?v=backup-v4', '/api.js?v=backup-v4', '/tools-core.js?v=backup-v4', '/tools.js?v=backup-v4', '/dictionary.js?v=backup-v4', '/manifest.webmanifest', '/icon.svg', '/brand/reverendo-albert-banner.png', '/brand/reverendo-albert-boas-vindas.png'];
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting())));
 self.addEventListener('activate', event => event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim())));
 self.addEventListener('fetch', event => {

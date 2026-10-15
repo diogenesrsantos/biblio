@@ -177,7 +177,7 @@ Em VPS, Nginx e HTTPS são obrigatórios para acesso externo. As portas internas
 
 A interface possui manifesto, ícone e service worker. Os arquivos estáticos são armazenados em cache para abertura da interface; artigos e mídias continuam dependendo do servidor.
 
-O cache atual é identificado como `biblio-shell-v51`.
+O cache atual é identificado como `biblio-shell-v52`.
 
 ## 10. Interface de leitura e edição
 
@@ -185,7 +185,7 @@ O cache atual é identificado como `biblio-shell-v51`.
 - Após a autenticação, uma arte vertical de boas-vindas com o reverendo Albert aparece sobre a interface e é fechada ao clicar na imagem.
 - A tela de personalização permite substituir tanto o banner quanto a arte de boas-vindas e informa as dimensões exigidas.
 - A mesma tela permite atualizar o usuário e a senha; a senha atual é exigida e novas senhas têm no mínimo 12 caracteres.
-- O botão de backup abre uma etapa de destino, com escolha de pasta/arquivo quando o navegador oferece a API correspondente, progresso visual, cancelamento e fechamento. Em navegadores sem essa API, o ZIP usa o download padrão.
+- O botão de backup abre uma etapa de destino, com escolha de pasta/arquivo quando o navegador oferece a API correspondente, progresso visual, cancelamento e fechamento. Em navegadores sem essa API, o botão passa a **Baixar cópia** e inicia o download padrão, com orientação sobre o destino definido pelo navegador. Se o seletor for bloqueado, a interface também oferece o download.
 - Título, subtítulo e imagem do banner são salvos no SQLite e incluídos nos backups.
 - A biblioteca lateral esquerda é exibida por padrão e pode ser recolhida para ampliar a leitura.
 - Temas do acervo podem conter subtemas. Um clique no tema principal expande ou recolhe os subtemas; o botão `＋` ao lado dele cria um subtema.
