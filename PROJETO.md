@@ -177,7 +177,7 @@ Em VPS, Nginx e HTTPS são obrigatórios para acesso externo. As portas internas
 
 A interface possui manifesto, ícone e service worker. Os arquivos estáticos são armazenados em cache para abertura da interface; artigos e mídias continuam dependendo do servidor.
 
-O cache atual é identificado como `biblio-shell-v50`.
+O cache atual é identificado como `biblio-shell-v51`.
 
 ## 10. Interface de leitura e edição
 
@@ -226,6 +226,7 @@ O cache atual é identificado como `biblio-shell-v50`.
 - Fonte: tradução parcial do *Dicionário Bíblico Easton* (1897), colaboradores do Wikisource em português, CC BY-SA 4.0. Autor original: Matthew George Easton. A interface e o banco preservam licença, revisão e histórico de autoria por verbete.
 - Bancos separados somente para leitura: `resources/dictionary/dictionary.sqlite` (português) e `dictionary-en.sqlite` (inglês), incluídos no Electron com ASAR unpack, configuráveis por `DICTIONARY_DB_FILE` e `DICTIONARY_EN_DB_FILE`.
 - Snapshots versionados em `resources/dictionary/`: Wikisource em português e GetBible em inglês, com metadados originais e hashes SHA-256 conferidos com o manifesto do distribuidor. `npm run build:dictionary` reconstrói os dois SQLite sem rede. Créditos ingleses: Matthew George Easton, CCEL, CrossWire/SWORD e GetBible; texto inglês em domínio público. Procedência e adaptações em `resources/dictionary/README.md`.
+- Os verbetes ingleses oferecem **Traduzir para português**, que abre o Google Tradutor em outra aba com título e texto preenchidos (inglês → português); exige internet.
 - API autenticada: `GET /api/dictionary`, `GET /api/dictionary/search?q=...` e `GET /api/dictionary/entries/:id`. O parâmetro `lang=pt|en` seleciona a edição (padrão `pt`). O diagnóstico inclui as contagens de ambas.
 - Conteúdo de referência acompanha a distribuição do sistema; os backups pessoais continuam incluindo banco do usuário e mídias.
 

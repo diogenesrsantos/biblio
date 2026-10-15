@@ -56,7 +56,8 @@
       const [edition, entry] = await Promise.all([load(selected), api(endpoint('/entries/' + id, selected))]);
       if (token !== generation) return;
       const provenance = selected === 'pt' ? `${link(entry.source_url, 'Revisão original no Wikisource')} · ${link(entry.history_url, 'Histórico e créditos dos tradutores')}` : link(entry.source_url, 'Texto de origem no GetBible');
-      show(entry.title, `<div class="dictionaryText" lang="${selected}">${escapeHtml(entry.text)}</div><p class="dictionaryProvenance">${selected === 'pt' ? 'Tradução em revisão. ' : ''}Texto histórico de 1897, que pode conter informações desatualizadas.<br>${provenance}</p><button id="dictionaryBack" class="bibleAbout" type="button">← Índice de verbetes</button>`, edition);
+      const translation = selected === 'en' ? `<p><a class="dictionaryTranslate" href="${escapeHtml('https://translate.google.com/?sl=en&tl=pt&text=' + encodeURIComponent(entry.title + '\n\n' + entry.text) + '&op=translate')}" target="_blank" rel="noopener noreferrer">Traduzir para português ↗</a><br><small>Abre o Google Tradutor em outra aba. Requer internet.</small></p>` : '';
+      show(entry.title, `${translation}<div class="dictionaryText" lang="${selected}">${escapeHtml(entry.text)}</div><p class="dictionaryProvenance">${selected === 'pt' ? 'Tradução em revisão. ' : ''}Texto histórico de 1897, que pode conter informações desatualizadas.<br>${provenance}</p><button id="dictionaryBack" class="bibleAbout" type="button">← Índice de verbetes</button>`, edition);
       $('#dictionaryBack').onclick = () => index();
     } catch (error) { if (token === generation) toast(error.message); }
   }
