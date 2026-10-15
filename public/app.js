@@ -248,6 +248,7 @@ function showBibleReader(title, content, { navigation = false, license = true, s
   $('#allThemes').classList.remove('active');
   $('#bibleToggle').classList.toggle('active', section === 'bible');
   $('#hebrewToggle').classList.toggle('active', section === 'hebrew');
+  $('#dictionaryToggle').classList.toggle('active', section === 'dictionary');
   toggleMedia(false);
   $('#bibleReader').scrollIntoView({ block: 'start' });
 }
@@ -474,6 +475,7 @@ function renderReader() {
   $('#readerActions').hidden = false;
   $('#bibleToggle').classList.remove('active');
   $('#hebrewToggle').classList.remove('active');
+  $('#dictionaryToggle').classList.remove('active');
   $('#showInfo').disabled = !hasArticle;
   $('#editArticle').disabled = !hasArticle;
   $('#printArticle').disabled = !hasArticle;
@@ -1451,6 +1453,8 @@ $('#bibleToggle').onclick = async () => {
     panel.hidden = !panel.hidden;
     $('#bibleToggle').setAttribute('aria-expanded', String(!panel.hidden));
     if (!panel.hidden) {
+      $('#dictionaryPanel').hidden = true;
+      $('#dictionaryToggle').setAttribute('aria-expanded', 'false');
       $('#hebrewPanel').hidden = true;
       $('#hebrewToggle').setAttribute('aria-expanded', 'false');
       await loadBibleIndex($('#bibleReader').hidden || !$('#bibleToggle').classList.contains('active'));
@@ -1463,6 +1467,8 @@ $('#hebrewToggle').onclick = async () => {
     panel.hidden = !panel.hidden;
     $('#hebrewToggle').setAttribute('aria-expanded', String(!panel.hidden));
     if (!panel.hidden) {
+      $('#dictionaryPanel').hidden = true;
+      $('#dictionaryToggle').setAttribute('aria-expanded', 'false');
       $('#biblePanel').hidden = true;
       $('#bibleToggle').setAttribute('aria-expanded', 'false');
       await loadHebrewInfo($('#bibleReader').hidden || !$('#hebrewToggle').classList.contains('active'));

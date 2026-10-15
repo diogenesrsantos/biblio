@@ -16,6 +16,7 @@ test('backup e restauração preservam banco e mídias', async t => {
   const database = createDatabase(path.join(source, 'biblio.db'));
   await migrate(database.query);
   await database.query("INSERT INTO settings(key,value) VALUES('teste','preservado')");
+  await database.query("INSERT INTO custom_holidays(name,date,annual) VALUES('Feriado regional','2026-10-15',1)");
   database.close();
   fs.writeFileSync(path.join(source, 'media', 'arquivo.txt'), 'mídia');
   const archive = await createBackup(source);
@@ -25,5 +26,6 @@ test('backup e restauração preservam banco e mídias', async t => {
   assert.equal(fs.readFileSync(path.join(destination, 'media', 'arquivo.txt'), 'utf8'), 'mídia');
   const restored = createDatabase(path.join(destination, 'biblio.db'));
   assert.equal((await restored.query("SELECT value FROM settings WHERE key='teste'")).rows[0].value, 'preservado');
+  assert.deepEqual((await restored.query('SELECT name,date,annual FROM custom_holidays')).rows, [{ name: 'Feriado regional', date: '2026-10-15', annual: 1 }]);
   restored.close();
 });

@@ -1,6 +1,6 @@
 # Registro consolidado do projeto Biblio
 
-Atualizado em 19 de setembro de 2026.
+Atualizado em 15 de outubro de 2026.
 
 Este documento concentra o estado técnico, as decisões de arquitetura, os procedimentos de operação e as pendências conhecidas da Biblio. Não devem ser registrados aqui senhas, chaves, cookies, URLs com credenciais ou dados pessoais do acervo.
 
@@ -177,7 +177,7 @@ Em VPS, Nginx e HTTPS são obrigatórios para acesso externo. As portas internas
 
 A interface possui manifesto, ícone e service worker. Os arquivos estáticos são armazenados em cache para abertura da interface; artigos e mídias continuam dependendo do servidor.
 
-O cache atual é identificado como `biblio-shell-v44`.
+O cache atual é identificado como `biblio-shell-v50`.
 
 ## 10. Interface de leitura e edição
 
@@ -219,6 +219,24 @@ O cache atual é identificado como `biblio-shell-v44`.
 - A ação de impressão apresenta primeiro uma pré-visualização limpa do artigo e depois abre a impressão do navegador, permitindo escolher uma impressora ou salvar em PDF.
 - O login permite exibir ou ocultar a senha e oferece seis temas visuais rápidos: Clássico, Oceano, Sépia, Rosé, Lavanda e Ardósia.
 - O tema visual é salvo no navegador e no SQLite, acompanha os backups e também é aplicado antes da autenticação nos acessos seguintes.
+
+### Dicionário bíblico em português e inglês
+
+- Seção lateral **Dicionário Bíblico**, com seletor de edição: português (61 verbetes de A a Acaicus) e inglês (3.963 verbetes, 3.961 títulos distintos). As pesquisas e os créditos são separados por idioma; a edição inglesa possui índice por letra.
+- Fonte: tradução parcial do *Dicionário Bíblico Easton* (1897), colaboradores do Wikisource em português, CC BY-SA 4.0. Autor original: Matthew George Easton. A interface e o banco preservam licença, revisão e histórico de autoria por verbete.
+- Bancos separados somente para leitura: `resources/dictionary/dictionary.sqlite` (português) e `dictionary-en.sqlite` (inglês), incluídos no Electron com ASAR unpack, configuráveis por `DICTIONARY_DB_FILE` e `DICTIONARY_EN_DB_FILE`.
+- Snapshots versionados em `resources/dictionary/`: Wikisource em português e GetBible em inglês, com metadados originais e hashes SHA-256 conferidos com o manifesto do distribuidor. `npm run build:dictionary` reconstrói os dois SQLite sem rede. Créditos ingleses: Matthew George Easton, CCEL, CrossWire/SWORD e GetBible; texto inglês em domínio público. Procedência e adaptações em `resources/dictionary/README.md`.
+- API autenticada: `GET /api/dictionary`, `GET /api/dictionary/search?q=...` e `GET /api/dictionary/entries/:id`. O parâmetro `lang=pt|en` seleciona a edição (padrão `pt`). O diagnóstico inclui as contagens de ambas.
+- Conteúdo de referência acompanha a distribuição do sistema; os backups pessoais continuam incluindo banco do usuário e mídias.
+
+### Calculadora e calendário
+
+Dois ícones na barra superior, entre o cabeçalho personalizado e Fazer cópia, abrem utilitários em janelas próprias:
+
+- Calculadora de fundo branco e visor verde luminoso, com quatro operações, porcentagem, raiz quadrada, quadrado, π e memória MC/MR/M+/M−. Aceita teclado e vírgula decimal. Em somas e subtrações, a porcentagem é relativa ao primeiro valor (200 + 10% = 220).
+- Calendário anual com navegação entre 1900 e 2199, feriados nacionais em vermelho e datas regionais identificadas em roxo. As regras nacionais atuais são projetadas sobre o ano escolhido; não é um calendário jurídico histórico. Carnaval e Corpus Christi podem ser cadastrados como datas regionais.
+- Feriados personalizados aceitam data única ou repetição anual e podem ser excluídos. São persistidos na tabela `custom_holidays` (migração 7), incluída no backup SQLite. A API autenticada oferece GET/POST `/api/calendar/holidays` e DELETE `/api/calendar/holidays/:id`.
+- `public/tools-core.js` contém cálculo e datas, com testes unitários; `public/tools.js` controla as janelas. O calendário funciona sem consulta a serviços externos.
 
 ## 11. Backup e restauração
 

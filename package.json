@@ -17,6 +17,7 @@
     "backup": "node scripts/backup.js",
     "build:bible": "node scripts/build-bible.js",
     "build:hebrew": "node scripts/build-hebrew.js",
+    "build:dictionary": "node scripts/build-dictionary.js",
     "restore": "node scripts/restore.js",
     "rebuild:desktop": "electron-rebuild -f -w better-sqlite3",
     "dist": "electron-builder",
@@ -34,7 +35,9 @@
     "asarUnpack": [
       "node_modules/better-sqlite3/**",
       "resources/bible/bible.sqlite",
-      "resources/hebrew/hebrew.sqlite"
+      "resources/hebrew/hebrew.sqlite",
+      "resources/dictionary/dictionary.sqlite",
+      "resources/dictionary/dictionary-en.sqlite"
     ],
     "files": [
       "**/*",

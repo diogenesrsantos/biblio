@@ -16,6 +16,12 @@ O módulo **Bíblia Sagrada** inclui a Bíblia Livre 2018 em português brasilei
 
 Todas as Escrituras em português do módulo são da Bíblia Livre (BLIVRE), Copyright © 2018 Diego Santos, Mario Sérgio e Marco Teles, sob licença Creative Commons Atribuição 4.0 Brasil. Os créditos completos e a procedência estão em [resources/bible/README.md](resources/bible/README.md) e na própria interface.
 
+## Dicionário bíblico offline — português e inglês
+
+O módulo **Dicionário Bíblico** permite escolher português ou inglês. Em português, inclui 61 verbetes, de A a Acaicus, da tradução colaborativa parcial do *Dicionário Bíblico Easton* (1897) disponível no Wikisource. Em inglês, inclui os 3.963 verbetes do módulo Easton 2.0.1, em domínio público, distribuído por GetBible a partir de CrossWire/SWORD e CCEL. As edições usam bancos SQLite separados, pesquisa própria e índice; a edição inglesa oferece navegação por letra.
+
+Autor original: Matthew George Easton. A tradução dos colaboradores do Wikisource em português é distribuída sob CC BY-SA 4.0; a edição inglesa permanece em domínio público. A interface mantém créditos, licença e links para a revisão e o histórico de cada verbete. A edição é incompleta e o texto histórico pode conter informações desatualizadas. Consulte [resources/dictionary/README.md](resources/dictionary/README.md).
+
 ## Hebraico bíblico offline
 
 O módulo **Hebraico Bíblico** oferece 7.597 verbetes e 15.272 sentidos em português. A pesquisa aceita palavras em português, hebraico com ou sem sinais vocálicos, transliteração e códigos Strong. Cada sentido apresenta definição, classe gramatical, domínio semântico e atalhos para suas ocorrências na Bíblia.

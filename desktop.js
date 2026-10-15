@@ -42,7 +42,7 @@ function startServer() {
   const modulePath = path.join(__dirname, 'server.js');
   log(`Iniciando servidor: module=${modulePath} data=${dataDir} port=${port} packaged=${app.isPackaged}`);
   server = utilityProcess.fork(modulePath, [], {
-    env: { ...process.env, PORT: String(port), DATA_DIR: dataDir, BIBLE_DB_FILE: app.isPackaged ? path.join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'bible', 'bible.sqlite') : path.join(__dirname, 'resources', 'bible', 'bible.sqlite'), HEBREW_DB_FILE: app.isPackaged ? path.join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'hebrew', 'hebrew.sqlite') : path.join(__dirname, 'resources', 'hebrew', 'hebrew.sqlite') },
+    env: { ...process.env, DICTIONARY_EN_DB_FILE: app.isPackaged ? path.join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'dictionary', 'dictionary-en.sqlite') : path.join(__dirname, 'resources', 'dictionary', 'dictionary-en.sqlite'), DICTIONARY_DB_FILE: app.isPackaged ? path.join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'dictionary', 'dictionary.sqlite') : path.join(__dirname, 'resources', 'dictionary', 'dictionary.sqlite'), PORT: String(port), DATA_DIR: dataDir, BIBLE_DB_FILE: app.isPackaged ? path.join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'bible', 'bible.sqlite') : path.join(__dirname, 'resources', 'bible', 'bible.sqlite'), HEBREW_DB_FILE: app.isPackaged ? path.join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'hebrew', 'hebrew.sqlite') : path.join(__dirname, 'resources', 'hebrew', 'hebrew.sqlite') },
     stdio: 'pipe',
     serviceName: 'Biblio Server'
   });

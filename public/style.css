@@ -478,3 +478,70 @@ legend { padding: 0 5px; font-weight: 750; }
   .printDocument .readerContent img { max-height: 220mm; }
   .printDocument, .printDocument * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 }
+
+/* Toolbar utilities */
+.topbar { grid-template-columns: minmax(190px, 1fr) minmax(300px, 3.6fr) minmax(258px, 1fr); }
+.topbarEnd .iconButton svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.calculatorDialog { width: min(94vw, 370px); height: min(510px, calc(100dvh - 24px)); max-height: calc(100dvh - 24px); background: #fff; color: #20382a; padding: 16px 20px; }
+.calculatorDialog[open] { display: flex; flex-direction: column; gap: 10px; }
+.calculatorDialog .dialogHeading { padding: 0; border: 0; align-items: center; flex-shrink: 0; }
+.calculatorDialog .dialogHeading h2 { font-size: 1.25rem; margin: 0; }
+.calculatorScreen { margin: 0; padding: 8px 12px; flex-shrink: 0; border-radius: 9px; background: #092b1c; box-shadow: inset 0 2px 7px #0008; color: #65ff91; text-align: right; font-family: 'Courier New', monospace; text-shadow: 0 0 7px #4aff8070; }
+.calculatorScreen small { display: block; height: 18px; font-size: .75rem; white-space: nowrap; }
+.calculatorScreen output { display: block; height: 38px; font-size: 30px; line-height: 38px; white-space: nowrap; }
+.calculatorKeys { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(7, minmax(0, 1fr)); gap: 6px; flex: 1; min-height: 0; }
+.calculatorKeys button { min-height: 0; padding: 0; border: 1px solid #d8e3da; border-radius: 7px; background: #f4f8f4; color: #20382a; font-size: 1.1rem; }
+.calculatorKeys button:hover { background: #e1efe4; }
+.calculatorKeys .calculatorEquals { grid-column: 4; grid-row: 6 / 8; background: #247241; color: white; }
+.calculatorHelp { font-size: .7rem; line-height: 1.35; color: #526858; margin: 0; flex-shrink: 0; }
+.calendarDialog { width: min(96vw, 1120px); }
+.calendarToolbar { display: flex; gap: 12px; align-items: center; justify-content: center; margin: 18px 0; }
+.calendarToolbar label { display: flex; gap: 8px; align-items: center; }
+.calendarToolbar input { width: 100px; }
+.calendarToolbar > button:last-child { padding: 9px; border: 1px solid var(--line); border-radius: 6px; }
+.calendarLegend { font-size: .8rem; color: var(--muted); }
+.calendarLegend span:first-child { color: #bd222c; margin-right: 12px; }
+.calendarLegend span:nth-child(2) { color: #6b459b; }
+.calendarMonths { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 15px; }
+.calendarMonth { padding: 10px; border: 1px solid var(--line); border-radius: 9px; }
+.calendarMonth h3 { margin: 0 0 10px; text-transform: capitalize; font-size: 1rem; text-align: center; }
+.calendarWeekdays, .calendarDays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); text-align: center; gap: 2px; }
+.calendarWeekdays { font-size: .7rem; color: var(--muted); margin-bottom: 5px; }
+.calendarDay { position: relative; padding: 6px 0; border-radius: 5px; font-size: .8rem; min-height: 30px; background: transparent; color: var(--ink); }
+.calendarDay:hover { background: var(--line); }
+.calendarDay.nationalHoliday { color: #bd222c; background: #bd222c12; font-weight: 800; }
+.calendarDay.regionalHoliday { box-shadow: inset 0 -2px #8059a8; }
+.calendarDay small { position: absolute; bottom: 0; right: 1px; font-size: 7px; color: #8059a8; }
+.calendarCurrentDay { outline: 2px solid var(--accent); outline-offset: -2px; font-weight: 800; }
+.holidayEditor { margin-top: 22px; border-top: 1px solid var(--line); }
+#holidayForm { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+#holidayForm > label:first-child { flex: 1; min-width: 180px; }
+#holidayForm .holidayAnnual { display: flex; align-items: center; gap: 6px; padding-bottom: 10px; }
+.holidayAnnual input { width: auto; }
+#holidaySave { padding: 12px; background: var(--accent); color: white; border-radius: 7px; }
+.holidayError { color: #bd222c; }
+.customHolidayList { list-style: none; padding: 0; }
+.customHolidayList li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.customHolidayList small { display: block; color: var(--muted); margin-top: 4px; }
+.customHolidayList button { color: #bd222c; padding: 8px; }
+.holidayDetails { margin-top: 16px; font-size: .85rem; }
+.holidayDetails li { margin: 5px 0; }
+@media (max-width: 1100px) { .calendarMonths { grid-template-columns: repeat(3, minmax(0, 1fr)); } .topbar { grid-template-columns: auto minmax(160px, 1fr) auto; gap: 8px; } }
+@media (max-width: 760px) { .topbarEnd .iconButton:first-child { display: inline-flex; } .calendarMonths { grid-template-columns: repeat(2, minmax(0, 1fr)); } .calendarDialog { padding: 18px 14px; } }
+@media (max-width: 580px) { .topbar { height: auto; min-height: var(--header-height); grid-template-columns: auto minmax(0, 1fr); } .topbar .banner { grid-column: 2; grid-row: 1; min-height: 70px; } .topbarEnd { grid-column: 1 / -1; justify-content: center; gap: 12px; } .calendarLegend { line-height: 1.8; } }
+@media (max-width: 380px) { .calendarMonths { grid-template-columns: 1fr; } }
+
+.dictionaryNotice { padding: 12px 16px; border-left: 3px solid var(--accent); background: var(--accent-soft); font-size: .85rem; }
+.dictionaryIndex { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 8px; margin-top: 24px; }
+.dictionaryIndex button { padding: 10px 14px; border: 1px solid var(--line); border-radius: 7px; text-align: left; background: var(--panel); }
+.dictionaryResults { display: grid; gap: 12px; }
+.dictionaryResult { display: grid; gap: 6px; width: 100%; padding: 16px; text-align: left; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); }
+.dictionaryResult strong { font-size: 1.15rem; }
+.dictionaryResult span { color: var(--muted); font-size: .9rem; }
+.dictionaryText { white-space: pre-wrap; font: 1.12rem/1.85 Georgia, serif; overflow-wrap: anywhere; }
+.dictionaryProvenance { margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: .82rem; }
+.dictionaryLanguageLabel { display: grid; gap: 5px; margin-bottom: 12px; font-size: .8rem; }
+.dictionaryLanguageLabel select { width: 100%; min-width: 0; }
+.dictionaryAlphabet { display: flex; flex-wrap: wrap; gap: 5px; margin: 20px 0 10px; }
+.dictionaryAlphabet button { padding: 6px 10px; border: 1px solid var(--line); border-radius: 5px; }
+.dictionaryAlphabet button[aria-pressed="true"] { background: var(--accent); color: #fff; }

@@ -1,0 +1,8 @@
+{
+  "source": "https://dictionaries.getbible.net/v1/hashes.json",
+  "algorithm": "sha256",
+  "files": {
+    "easton.json": "f509362bbf079b87a88a56afb01a460940135665cafad1ca53a8889e9d2a464d",
+    "easton/metadata.json": "7108734a0770d23ea7f68d264df6ef3776808a02f0ed5a7e65ef7fa9f9a4c01f"
+  }
+}

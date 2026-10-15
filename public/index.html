@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#263229">
   <meta name="description" content="Biblioteca pessoal de artigos e referências.">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/style.css?v=image-resize-v1">
+  <link rel="stylesheet" href="/style.css?v=dictionary-v2">
   <title>Biblio</title>
 </head>
 <body>
@@ -36,6 +36,8 @@
       <span class="bannerShade"></span><span class="bannerCopy"><strong id="bannerTitle">Minha biblioteca</strong><small id="bannerSubtitle">Leituras, ideias e referências</small></span><span class="bannerEdit" aria-hidden="true">✦</span>
     </button>
     <div class="topbarSide topbarEnd">
+      <button id="calculatorButton" class="iconButton" type="button" title="Calculadora" aria-label="Calculadora"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 6h8M8 10h2m4 0h2M8 14h2m4 0h2M8 18h2m4 0h2"/></svg></button>
+      <button id="calendarButton" class="iconButton" type="button" title="Calendário" aria-label="Calendário"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 2v6m10-6v6M3 11h18M7 15h2m3 0h2m3 0h1M7 18h2m3 0h2"/></svg></button>
       <button id="backupButton" class="iconButton" type="button" title="Fazer cópia" aria-label="Fazer cópia">⇩</button>
       <button id="restoreButton" class="iconButton" type="button" title="Restaurar cópia" aria-label="Restaurar cópia">↻</button>
       <input id="restoreInput" type="file" accept=".zip,application/zip" hidden>
@@ -61,6 +63,15 @@
         <div id="bibleNewBooks" class="bibleBooks" hidden></div>
         <button id="bibleHighlights" class="bibleHighlightsButton" type="button"><span>▰ Minhas marcações</span><span id="bibleHighlightsCount">0</span></button>
         <button id="bibleAbout" class="bibleAbout" type="button">Sobre esta tradução</button>
+      </div>
+      <div class="sectionHeading"><p class="eyebrow">DICIONÁRIO BÍBLICO</p></div>
+      <button id="dictionaryToggle" class="theme" type="button" aria-expanded="false"><span id="dictionaryEditionLabel">▤ Easton em português</span><span class="themeCount">61</span></button>
+      <div id="dictionaryPanel" class="biblePanel" hidden>
+        <label class="dictionaryLanguageLabel">Edição<select id="dictionaryLanguage" aria-label="Idioma do dicionário"><option value="pt">Português · 61 verbetes</option><option value="en">Inglês · 3.963 verbetes</option></select></label>
+        <label class="bibleSearchBox"><input id="dictionarySearch" placeholder="Palavra ou assunto" aria-label="Pesquisar no dicionário bíblico"><button id="dictionarySearchButton" type="button" aria-label="Pesquisar no dicionário bíblico">⌕</button></label>
+        <p id="dictionaryHint" class="hebrewSearchHint">Tradução parcial: 61 verbetes, de A a Acaicus.</p>
+        <button id="dictionaryIndex" class="bibleAbout" type="button">Todos os verbetes</button>
+        <button id="dictionaryAbout" class="bibleAbout" type="button">Sobre, créditos e licença</button>
       </div>
       <div class="sectionHeading hebrewSectionHeading"><p class="eyebrow">IDIOMAS BÍBLICOS</p></div>
       <button id="hebrewToggle" class="theme hebrewToggle" type="button" aria-expanded="false"><span><b lang="he" dir="rtl">א</b> Hebraico Bíblico</span><span class="themeCount">7.597</span></button>
@@ -186,6 +197,23 @@
 
   <div id="welcomePopup" class="welcomePopup" role="dialog" aria-modal="true" aria-label="Boas-vindas à biblioteca" hidden><button id="welcomeArtwork" class="welcomeArtwork" type="button" aria-label="Entrar na biblioteca"><img src="/brand/reverendo-albert-boas-vindas.png" alt="Reverendo Albert em composição cristã com Bíblia, cruz e luz celestial"><span>Clique na imagem para entrar</span></button></div>
   <div id="imageModal" class="imageModal" hidden><button id="closeImage" type="button" class="closeImage" aria-label="Fechar imagem">×</button><button id="previousImage" type="button" class="imageArrow imagePrevious" aria-label="Imagem anterior">‹</button><figure><img alt=""><figcaption id="imageCaption"></figcaption></figure><button id="nextImage" type="button" class="imageArrow imageNext" aria-label="Próxima imagem">›</button></div>
-  <div id="toast" role="status" aria-live="polite"></div><script src="/api.js?v=image-resize-v1"></script><script src="/app.js?v=image-resize-v1"></script>
+  <dialog id="calculatorDialog" class="glassDialog calculatorDialog" aria-labelledby="calculatorTitle">
+    <div class="dialogHeading"><h2 id="calculatorTitle">Calculadora</h2><button class="iconButton" type="button" data-tool-close aria-label="Fechar calculadora">×</button></div>
+    <div class="calculatorScreen"><small id="calculatorStatus">&nbsp;</small><output id="calculatorDisplay" aria-live="polite" aria-label="Resultado">0</output></div>
+    <div id="calculatorKeys" class="calculatorKeys"></div>
+    <p class="calculatorHelp">Use também o teclado. C limpa, Enter calcula e Esc fecha.</p>
+  </dialog>
+  <dialog id="calendarDialog" class="glassDialog calendarDialog" aria-labelledby="calendarTitle">
+    <div class="dialogHeading"><h2 id="calendarTitle">Calendário</h2><button class="iconButton" type="button" data-tool-close aria-label="Fechar calendário">×</button></div>
+    <div class="calendarToolbar"><button id="calendarPrevious" class="iconButton" type="button" aria-label="Ano anterior">‹</button><label>Ano <input id="calendarYear" type="number" min="1900" max="2199" required></label><button id="calendarNext" class="iconButton" type="button" aria-label="Próximo ano">›</button><button id="calendarToday" type="button">Ano atual</button></div>
+    <p class="calendarLegend"><span>● Feriado nacional</span><span>◆ Feriado personalizado</span> · Clique em um dia para cadastrar.</p>
+    <div id="calendarMonths" class="calendarMonths"></div>
+    <section class="holidayEditor"><h3>Feriados da minha região</h3>
+      <form id="holidayForm"><label>Nome<input id="holidayName" maxlength="120" required placeholder="Ex.: Aniversário da cidade"></label><label>Data<input id="holidayDate" type="date" min="1900-01-01" max="2199-12-31" required></label><label class="holidayAnnual"><input id="holidayAnnual" type="checkbox" checked> Repetir todos os anos</label><button id="holidaySave" type="submit">Adicionar feriado</button></form>
+      <p id="holidayError" class="holidayError" role="alert"></p><ul id="customHolidayList" class="customHolidayList"></ul>
+    </section>
+    <details class="holidayDetails"><summary>Feriados nacionais do ano</summary><ul id="nationalHolidayList"></ul><p>Carnaval e Corpus Christi podem ser adicionados conforme o calendário da sua região. Datas nacionais conforme o <a href="https://www.sirc.gov.br/feriados-e-indisponibilidades-sirc/" target="_blank" rel="noopener noreferrer">calendário oficial</a>; regras atuais aplicadas ao ano escolhido.</p></details>
+  </dialog>
+  <div id="toast" role="status" aria-live="polite"></div><script src="/api.js?v=dictionary-v2"></script><script src="/app.js?v=dictionary-v2"></script><script src="/tools-core.js?v=dictionary-v2"></script><script src="/tools.js?v=dictionary-v2"></script><script src="/dictionary.js?v=dictionary-v2"></script>
 </body>
 </html>
