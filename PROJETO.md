@@ -1,6 +1,6 @@
 # Registro consolidado do projeto Biblio
 
-Atualizado em 15 de outubro de 2026.
+Atualizado em 19 de outubro de 2026.
 
 Este documento concentra o estado técnico, as decisões de arquitetura, os procedimentos de operação e as pendências conhecidas da Biblio. Não devem ser registrados aqui senhas, chaves, cookies, URLs com credenciais ou dados pessoais do acervo.
 
@@ -23,8 +23,8 @@ O público esperado é de uma a três pessoas. A aplicação prioriza simplicida
 - Repositório: `https://github.com/diogenesrsantos/biblio`
 - Branch principal histórica: `master` (ainda não contém a linha SQLite recente)
 - Linha funcional atual: `feat/biblia-sagrada`, após a tag `v0.1.10`
-- Tag mais recente no repositório local: `v0.1.10` (`9a560ff`)
-- Próxima versão em desenvolvimento: `0.1.12`
+- Última versão consolidada: `0.1.12`
+- Tag de consolidação: `v0.1.12`
 - Estado de produção documentado: código de `8fe3c25` publicado diretamente na VPS; confirmar o estado externo antes de nova publicação
 - Versão declarada no `package.json`: `0.1.12`
 - Runtime: Node.js 22
@@ -318,7 +318,7 @@ Os dados desktop ficam na subpasta `data` do diretório de dados do usuário for
 
 O workflow gera os instaladores Windows e Linux, publica-os como artifacts e, em tags `v*`, tenta criar a GitHub Release com esses arquivos. A configuração atual usa `gh release create` com o token do GitHub Actions.
 
-Na tag `v0.1.9`, os jobs Windows e Linux concluíram, mas o job `release` falhou. O workflow foi atualizado para executar testes antes dos builds, usar as versões Node 24 das actions de artefatos e publicar de forma idempotente com `gh release upload --clobber`. A correção precisa ser confirmada na próxima tag; o runtime da aplicação permanece em Node 22.
+Na tag `v0.1.9`, os jobs Windows e Linux concluíram, mas o job `release` falhou. O workflow foi atualizado para executar testes antes dos builds, usar as versões Node 24 das actions de artefatos e publicar de forma idempotente com `gh release upload --clobber`; a validação ocorre na consolidação da `v0.1.12`. O runtime da aplicação permanece em Node 22.
 
 ## 14. Histórico relevante
 
@@ -397,7 +397,7 @@ Nunca sincronizar `data/` para atualizar o código. Após o último `npm ci`, o 
 
 ## 19. Próxima sequência recomendada
 
-1. Revisar as mudanças da versão `0.1.11` e executar `npm test`, auditoria e build dos instaladores.
+1. Confirmar os instaladores e a página da GitHub Release produzidos para a `v0.1.12`.
 2. Criar backup externo da VPS e testar uma restauração completa em ambiente separado.
-3. Criar a tag somente após validar migração de um banco real copiado e instalação limpa.
-4. Confirmar installers e página da GitHub Release produzidos pelo workflow.
+3. Validar migração de um banco real copiado e uma instalação limpa antes da próxima tag.
+4. Revisar auditoria de dependências e atualizar a cadeia vulnerável de forma controlada.
